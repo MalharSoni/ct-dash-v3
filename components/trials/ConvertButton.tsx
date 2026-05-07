@@ -1,26 +1,17 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { ArrowRight, Loader2 } from "lucide-react";
+import { useTransition } from "react";
+import { ArrowRight, ChevronDown, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { convertTrialToStudent } from "@/app/trial-students/actions";
 import type { StudentTrack } from "@prisma/client";
 
@@ -31,15 +22,13 @@ interface Props {
 }
 
 export function ConvertButton({ trialId, trialName, alreadyConverted }: Props) {
-  const [open, setOpen] = useState(false);
-  const [track, setTrack] = useState<StudentTrack>("FOUNDATION");
   const [isPending, startTransition] = useTransition();
 
-  function handleConvert() {
+  function convert(track: StudentTrack, label: string) {
     startTransition(async () => {
       try {
         await convertTrialToStudent({ trialId, track });
-        toast.success(`${trialName} added as student`);
+        toast.success(`${trialName} enrolled as ${label}`);
       } catch (e: unknown) {
         if (e instanceof Error && e.message.includes("NEXT_REDIRECT")) throw e;
         toast.error(e instanceof Error ? e.message : "Failed");
@@ -50,49 +39,51 @@ export function ConvertButton({ trialId, trialName, alreadyConverted }: Props) {
   if (alreadyConverted) {
     return (
       <Button variant="outline" size="sm" disabled>
-        <ArrowRight size={13} /> Already converted
+        <ArrowRight size={13} /> Already enrolled
       </Button>
     );
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button size="sm">
-          <ArrowRight size={13} /> Convert to student
-        </Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Convert {trialName} to a student</DialogTitle>
-          <DialogDescription>
-            Creates a new student record from this trial&apos;s details and
-            marks the trial as <strong>Joined</strong>. Choose which track to
-            place them on.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-1.5">
-          <Label>Track</Label>
-          <Select value={track} onValueChange={(v) => setTrack(v as StudentTrack)}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="FOUNDATION">Foundation</SelectItem>
-              <SelectItem value="PROJECTS">Projects</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" size="sm" onClick={() => setOpen(false)}>
-            Cancel
+    <div className="inline-flex rounded-[var(--radius-sm)] shadow-card overflow-hidden">
+      <Button
+        size="sm"
+        onClick={() => convert("FOUNDATION", "Foundation")}
+        disabled={isPending}
+        className="rounded-r-none"
+      >
+        {isPending ? (
+          <Loader2 size={13} className="animate-spin" />
+        ) : (
+          <ArrowRight size={13} />
+        )}
+        Enroll as Foundation
+      </Button>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            size="sm"
+            disabled={isPending}
+            aria-label="More enrollment options"
+            className="rounded-l-none border-l border-brand-dim/40 px-2"
+          >
+            <ChevronDown size={13} />
           </Button>
-          <Button size="sm" onClick={handleConvert} disabled={isPending}>
-            {isPending && <Loader2 size={13} className="animate-spin" />}
-            Convert
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="min-w-[200px]">
+          <DropdownMenuLabel className="text-[10.5px] uppercase tracking-[0.05em]">
+            Enroll on track
+          </DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => convert("FOUNDATION", "Foundation")}>
+            Foundation
+            <span className="ml-auto text-[10.5px] text-mute-1">default</span>
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => convert("PROJECTS", "Projects")}>
+            Projects
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
   );
 }

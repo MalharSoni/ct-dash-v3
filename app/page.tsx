@@ -46,12 +46,20 @@ async function getDashboardStats() {
     },
   });
 
+  const thirtyDaysAgo = subDays(today, 30);
+  const sevenDaysAgo = subDays(today, 7);
+  const fourteenDaysAgo = subDays(today, 14);
+
   const [
     activeStudents,
     foundation,
     trialsThisWeek,
     activeTeams,
     upcomingTrials,
+    studentsJoinedLast30,
+    foundationJoinedLast30,
+    trialsLastWeek,
+    trialsPriorWeek,
   ] = await Promise.all([
     prisma.student.count({
       where: {
@@ -76,6 +84,21 @@ async function getDashboardStats() {
       },
       orderBy: { scheduledAt: "asc" },
       take: 5,
+    }),
+    prisma.student.count({
+      where: {
+        joinedAt: { gte: thirtyDaysAgo },
+        track: { in: ["FOUNDATION", "PROJECTS"] },
+      },
+    }),
+    prisma.student.count({
+      where: { joinedAt: { gte: thirtyDaysAgo }, track: "FOUNDATION" },
+    }),
+    prisma.trialStudent.count({
+      where: { createdAt: { gte: sevenDaysAgo } },
+    }),
+    prisma.trialStudent.count({
+      where: { createdAt: { gte: fourteenDaysAgo, lt: sevenDaysAgo } },
     }),
   ]);
 
@@ -117,6 +140,8 @@ async function getDashboardStats() {
     },
   });
 
+  const trialDelta = trialsLastWeek - trialsPriorWeek;
+
   return {
     activeStudents,
     foundation,
@@ -129,6 +154,9 @@ async function getDashboardStats() {
     overdueTasks,
     upcomingTrialsToday,
     trialsAwaitingAssessment,
+    studentsJoinedLast30,
+    foundationJoinedLast30,
+    trialDelta,
   };
 }
 
@@ -176,20 +204,48 @@ export default async function DashboardPage() {
           <StatCard
             label="Active students"
             value={stats.activeStudents}
-            meta="Projects + foundation"
+            meta={
+              stats.studentsJoinedLast30 > 0
+                ? "joined last 30 days"
+                : "Projects + foundation"
+            }
+            trend={
+              stats.studentsJoinedLast30 > 0
+                ? { value: `+${stats.studentsJoinedLast30}`, positive: true }
+                : undefined
+            }
             icon={Users}
             accent="brand"
           />
           <StatCard
             label="Foundation"
             value={stats.foundation}
-            meta="On track"
+            meta={
+              stats.foundationJoinedLast30 > 0
+                ? "new last 30 days"
+                : "On track"
+            }
+            trend={
+              stats.foundationJoinedLast30 > 0
+                ? { value: `+${stats.foundationJoinedLast30}`, positive: true }
+                : undefined
+            }
             icon={GraduationCap}
           />
           <StatCard
             label="Trials this week"
             value={stats.trialsThisWeek}
-            meta="Saturday"
+            meta={
+              stats.trialDelta !== 0 ? "vs prior 7 days" : "Saturday"
+            }
+            trend={
+              stats.trialDelta !== 0
+                ? {
+                    value: `${stats.trialDelta > 0 ? "+" : ""}${stats.trialDelta}`,
+                    positive: stats.trialDelta > 0,
+                  }
+                : undefined
+            }
             icon={Sparkles}
           />
           <StatCard

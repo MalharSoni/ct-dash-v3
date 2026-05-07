@@ -13,6 +13,9 @@ import {
   Plus,
   FolderKanban,
   Trophy,
+  Sparkles,
+  ClipboardCheck,
+  StickyNote,
 } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/button";
@@ -24,6 +27,7 @@ import {
 } from "@/components/students/AttendanceHistory";
 import { XFactorFeed } from "@/components/students/XFactorFeed";
 import { SkillsManager } from "@/components/students/SkillsManager";
+import { TrackSwitcher } from "@/components/students/TrackSwitcher";
 import {
   Tabs,
   TabsContent,
@@ -31,23 +35,8 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 import { prisma } from "@/lib/prisma";
-import { cn } from "@/lib/utils";
-import type { StudentTrack } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
-
-const TRACK_BADGE: Record<StudentTrack, string> = {
-  FOUNDATION: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  PROJECTS: "bg-amber-50 text-amber-700 border-amber-200",
-  GRADUATED: "bg-blue-50 text-blue-700 border-blue-200",
-  INACTIVE: "bg-mute-3 text-mute-1 border-mute-3",
-};
-const TRACK_LABEL: Record<StudentTrack, string> = {
-  FOUNDATION: "Foundation",
-  PROJECTS: "Projects",
-  GRADUATED: "Graduated",
-  INACTIVE: "Inactive",
-};
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -133,6 +122,18 @@ export default async function StudentDetailPage({ params }: PageProps) {
     (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
   );
 
+  // Quick stats for the hero
+  const presentCount = student.attendance.filter((a) => a.status === "PRESENT").length;
+  const attendanceRate = student.attendance.length > 0
+    ? Math.round((presentCount / student.attendance.length) * 100)
+    : null;
+  const avgRating = student.performance.length > 0
+    ? (
+        student.performance.reduce((s, p) => s + p.rating, 0) /
+        student.performance.length
+      ).toFixed(1)
+    : null;
+
   return (
     <AppShell
       title={`${student.firstName} ${student.lastName}`}
@@ -147,65 +148,104 @@ export default async function StudentDetailPage({ params }: PageProps) {
       <div className="space-y-5">
         <Link
           href="/students"
-          className="inline-flex items-center gap-1 text-[12.5px] text-mute-1 hover:text-foreground"
+          className="inline-flex items-center gap-1 text-[12.5px] text-mute-1 hover:text-foreground transition-colors"
         >
           <ChevronLeft size={14} /> Back to students
         </Link>
 
         {/* Hero */}
-        <div className="bg-card border border-border rounded-[var(--radius)] shadow-card p-5 flex items-start gap-5">
-          <AvatarInitials
-            firstName={student.firstName}
-            lastName={student.lastName}
-            size={64}
-          />
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="text-[22px] font-extrabold tracking-tight text-foreground">
-                {student.firstName} {student.lastName}
-              </h2>
-              <span
-                className={cn(
-                  "inline-flex items-center px-2 py-0.5 rounded text-[10.5px] font-bold uppercase tracking-[0.03em] border",
-                  TRACK_BADGE[student.track]
+        <div className="bg-card border border-border rounded-[var(--radius)] shadow-card overflow-hidden">
+          <div className="p-5 flex items-start gap-5">
+            <AvatarInitials
+              firstName={student.firstName}
+              lastName={student.lastName}
+              size={64}
+            />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-[22px] font-extrabold tracking-tight text-foreground">
+                  {student.firstName} {student.lastName}
+                </h2>
+                <TrackSwitcher studentId={student.id} current={student.track} />
+                {!student.active && (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-[10.5px] font-bold uppercase tracking-[0.03em] border bg-mute-3 text-mute-1 border-mute-3">
+                    Inactive
+                  </span>
                 )}
-              >
-                {TRACK_LABEL[student.track]}
-              </span>
-              {!student.active && (
-                <span className="text-[10.5px] font-bold uppercase tracking-[0.03em] text-mute-1">
-                  Inactive
-                </span>
-              )}
-            </div>
-            <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-[12.5px] text-mute-1">
-              {student.grade && (
+              </div>
+              <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-[12.5px] text-mute-1">
+                {student.grade && (
+                  <span className="inline-flex items-center gap-1.5">
+                    <GraduationCap size={13} />
+                    Grade {student.grade}
+                    {student.gradYear ? ` · '${String(student.gradYear).slice(2)}` : ""}
+                  </span>
+                )}
                 <span className="inline-flex items-center gap-1.5">
-                  <GraduationCap size={13} />
-                  Grade {student.grade}
-                  {student.gradYear ? ` · '${String(student.gradYear).slice(2)}` : ""}
+                  <CalendarDays size={13} />
+                  Joined {format(student.joinedAt, "MMM d, yyyy")}
                 </span>
-              )}
-              <span className="inline-flex items-center gap-1.5">
-                <CalendarDays size={13} />
-                Joined {format(student.joinedAt, "MMM d, yyyy")}
-              </span>
-              {student.teamMemberships.length > 0 && (
-                <span className="inline-flex items-center gap-1.5">
-                  <Users2 size={13} />
-                  {student.teamMemberships
-                    .map((m) => m.team.teamNumber)
-                    .join(", ")}
-                </span>
-              )}
+                {student.teamMemberships.length > 0 && (
+                  <span className="inline-flex items-center gap-1.5">
+                    <Users2 size={13} />
+                    {student.teamMemberships
+                      .map((m) => m.team.teamNumber)
+                      .join(", ")}
+                  </span>
+                )}
+              </div>
             </div>
+          </div>
+
+          {/* Quick stats strip */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 border-t border-border bg-mute-4/40 divide-x divide-y sm:divide-y-0 divide-border">
+            <HeroStat
+              icon={ClipboardCheck}
+              label="Attendance"
+              value={attendanceRate != null ? `${attendanceRate}%` : "—"}
+              hint={
+                attendanceRate != null
+                  ? `${presentCount}/${student.attendance.length}`
+                  : "No data"
+              }
+            />
+            <HeroStat
+              icon={Sparkles}
+              label="Avg rating"
+              value={avgRating ?? "—"}
+              hint={
+                avgRating != null
+                  ? `${student.performance.length} sessions`
+                  : "No data"
+              }
+            />
+            <HeroStat
+              icon={StickyNote}
+              label="Coach notes"
+              value={String(student.coachNotes.length)}
+              hint={
+                student.coachNotes.filter((n) => n.pinned).length > 0
+                  ? `${student.coachNotes.filter((n) => n.pinned).length} pinned`
+                  : "—"
+              }
+            />
+            <HeroStat
+              icon={Trophy}
+              label="Skills tracked"
+              value={String(student.studentSkills.length)}
+              hint={
+                student.xFactorNotes.length > 0
+                  ? `${student.xFactorNotes.length} x-factor`
+                  : "—"
+              }
+            />
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-4">
           {/* Left — tabs */}
-          <Tabs defaultValue="overview" className="space-y-3">
-            <TabsList>
+          <Tabs defaultValue="overview" className="space-y-3 min-w-0">
+            <TabsList className="max-w-full overflow-x-auto no-scrollbar justify-start">
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="notes">
                 Notes ({student.coachNotes.length})
@@ -468,6 +508,37 @@ function ContactRow({
           <span className="text-mute-2">—</span>
         )}
       </dd>
+    </div>
+  );
+}
+
+function HeroStat({
+  icon: Icon,
+  label,
+  value,
+  hint,
+}: {
+  icon: typeof Mail;
+  label: string;
+  value: string;
+  hint: string;
+}) {
+  return (
+    <div className="px-4 py-3 flex items-center gap-3">
+      <div className="size-8 grid place-items-center rounded-md bg-card border border-border text-mute-1">
+        <Icon size={14} />
+      </div>
+      <div className="min-w-0">
+        <div className="text-[10px] font-bold uppercase tracking-[0.05em] text-mute-1">
+          {label}
+        </div>
+        <div className="flex items-baseline gap-1.5">
+          <span className="text-[16px] font-extrabold text-foreground tracking-tight tabular-nums">
+            {value}
+          </span>
+          <span className="text-[11px] text-mute-1 truncate">{hint}</span>
+        </div>
+      </div>
     </div>
   );
 }

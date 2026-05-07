@@ -153,6 +153,53 @@ export async function bulkSetAttendance(input: unknown) {
   revalidatePath("/");
 }
 
+/**
+ * Restore prior attendance state for a set of students. Used to undo a bulk
+ * mark. A record with `status: null` means the student had no record before,
+ * so we delete the row instead of upserting.
+ */
+export async function restoreAttendance(input: unknown) {
+  const data = z
+    .object({
+      sessionId: z.string(),
+      records: z
+        .array(
+          z.object({
+            studentId: z.string(),
+            status: z.enum(STATUSES).nullable(),
+          })
+        )
+        .min(1),
+    })
+    .parse(input);
+  const coach = await getCurrentCoach();
+  await prisma.$transaction(
+    data.records.map((r) =>
+      r.status === null
+        ? prisma.attendanceRecord.deleteMany({
+            where: { sessionId: data.sessionId, studentId: r.studentId },
+          })
+        : prisma.attendanceRecord.upsert({
+            where: {
+              sessionId_studentId: {
+                sessionId: data.sessionId,
+                studentId: r.studentId,
+              },
+            },
+            create: {
+              sessionId: data.sessionId,
+              studentId: r.studentId,
+              status: r.status,
+              recordedById: coach.id,
+            },
+            update: { status: r.status, recordedById: coach.id },
+          })
+    )
+  );
+  revalidatePath("/attendance");
+  revalidatePath("/");
+}
+
 export async function addXFactorNote(input: unknown) {
   const data = z
     .object({

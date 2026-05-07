@@ -35,7 +35,15 @@ interface Props {
   rating: number | null;
   notes: string | null;
   xFactorCount: number;
+  lastStatus?: AttendanceStatus | null;
 }
+
+const LAST_STATUS_BADGE: Record<AttendanceStatus, { label: string; cls: string; tip: string }> = {
+  PRESENT: { label: "P", cls: "bg-emerald-50 text-emerald-700 border-emerald-200", tip: "Present last session" },
+  LATE: { label: "L", cls: "bg-amber-50 text-amber-700 border-amber-200", tip: "Late last session" },
+  EXCUSED: { label: "E", cls: "bg-blue-50 text-blue-700 border-blue-200", tip: "Excused last session" },
+  ABSENT: { label: "A", cls: "bg-red-50 text-red-700 border-red-200", tip: "Absent last session" },
+};
 
 const STATUS_BUTTONS: { value: AttendanceStatus; label: string; icon: typeof Check; cls: string }[] = [
   { value: "PRESENT", label: "P", icon: Check, cls: "data-[on=true]:bg-emerald-50 data-[on=true]:text-emerald-700 data-[on=true]:border-emerald-300" },
@@ -51,6 +59,7 @@ export function RosterRow({
   rating,
   notes,
   xFactorCount,
+  lastStatus,
 }: Props) {
   const [isPending, startTransition] = useTransition();
   const [xfOpen, setXfOpen] = useState(false);
@@ -80,12 +89,23 @@ export function RosterRow({
   return (
     <>
     <tr className="border-b last:border-b-0 border-border hover:bg-mute-4/40 transition-colors">
-      <td className="px-4 py-2">
+      <td className="px-4 py-2 sticky left-0 bg-card z-10 group-hover:bg-mute-4/40">
         <div className="flex items-center gap-2.5">
           <AvatarInitials firstName={student.firstName} lastName={student.lastName} size={28} />
-          <div>
-            <div className="font-semibold text-[13px]">
-              {student.firstName} {student.lastName}
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5 font-semibold text-[13px]">
+              <span>{student.firstName} {student.lastName}</span>
+              {lastStatus && lastStatus !== "PRESENT" && (
+                <span
+                  title={LAST_STATUS_BADGE[lastStatus].tip}
+                  className={cn(
+                    "inline-flex items-center justify-center w-4 h-4 rounded-full text-[9px] font-bold border",
+                    LAST_STATUS_BADGE[lastStatus].cls
+                  )}
+                >
+                  {LAST_STATUS_BADGE[lastStatus].label}
+                </span>
+              )}
             </div>
             <div className="text-[10.5px] uppercase tracking-[0.05em] text-mute-1 font-bold">
               {student.track === "FOUNDATION" ? "Foundation" : student.track === "PROJECTS" ? "Projects" : student.track}

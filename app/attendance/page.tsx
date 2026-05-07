@@ -1,9 +1,12 @@
-import { format, subDays } from "date-fns";
-import { ClipboardCheck } from "lucide-react";
+import Link from "next/link";
+import { format, subDays, addDays } from "date-fns";
+import { ChevronLeft, ChevronRight, ClipboardCheck } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
+import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { RosterRow } from "@/components/attendance/RosterRow";
 import { BulkActions } from "@/components/attendance/BulkActions";
+import { DatePicker } from "@/components/attendance/DatePicker";
 import { ensureSession } from "./actions";
 import { prisma } from "@/lib/prisma";
 
@@ -68,6 +71,9 @@ export default async function AttendancePage({ searchParams }: PageProps) {
     (a) => a.status === "PRESENT" || a.status === "LATE"
   ).length;
   const prevTotal = prevAttendance.length;
+  const prevStatusByStudent = new Map(
+    prevAttendance.map((a) => [a.studentId, a.status])
+  );
 
   // Stats
   const presentCount = attendance.filter(
@@ -87,21 +93,34 @@ export default async function AttendancePage({ searchParams }: PageProps) {
               {presentCount} of {totalCount} marked present.
             </p>
           </div>
-          <form action="/attendance" className="flex items-center gap-2">
-            <label className="text-[12px] text-mute-1">Session date:</label>
-            <input
-              type="date"
-              name="d"
-              defaultValue={format(day, "yyyy-MM-dd")}
-              className="bg-card border border-border rounded-[var(--radius-sm)] px-3 py-1.5 text-[13px]"
-            />
-            <button
-              type="submit"
-              className="text-[12.5px] font-semibold text-mute-1 hover:text-foreground"
-            >
-              Go →
-            </button>
-          </form>
+          <div className="flex items-center gap-1.5">
+            <Button asChild variant="outline" size="icon" className="size-8">
+              <Link
+                href={`/attendance?d=${format(subDays(day, 1), "yyyy-MM-dd")}`}
+                aria-label="Previous day"
+                prefetch={false}
+              >
+                <ChevronLeft size={14} />
+              </Link>
+            </Button>
+            <DatePicker date={format(day, "yyyy-MM-dd")} />
+            <Button asChild variant="outline" size="icon" className="size-8">
+              <Link
+                href={`/attendance?d=${format(addDays(day, 1), "yyyy-MM-dd")}`}
+                aria-label="Next day"
+                prefetch={false}
+              >
+                <ChevronRight size={14} />
+              </Link>
+            </Button>
+            {format(day, "yyyy-MM-dd") !== format(new Date(), "yyyy-MM-dd") && (
+              <Button asChild variant="ghost" size="sm" className="ml-1">
+                <Link href="/attendance" prefetch={false}>
+                  Today
+                </Link>
+              </Button>
+            )}
+          </div>
         </div>
 
         {previousSession && prevTotal > 0 && (
@@ -137,12 +156,15 @@ export default async function AttendancePage({ searchParams }: PageProps) {
             sessionId={session.id}
             studentIds={students.map((s) => s.id)}
             unmarkedIds={students.filter((s) => !attMap.has(s.id)).map((s) => s.id)}
+            priorStatus={Object.fromEntries(
+              students.map((s) => [s.id, attMap.get(s.id)?.status ?? null])
+            )}
           />
-          <div className="bg-card border border-border rounded-[var(--radius)] shadow-card overflow-hidden">
-            <table className="w-full text-[13px]">
+          <div className="bg-card border border-border rounded-[var(--radius)] shadow-card overflow-x-auto">
+            <table className="w-full min-w-[720px] text-[13px]">
               <thead>
                 <tr className="bg-mute-4 border-b border-border text-left">
-                  <th className="text-table-head px-4 py-2.5">Student</th>
+                  <th className="text-table-head px-4 py-2.5 sticky left-0 bg-mute-4 z-10">Student</th>
                   <th className="text-table-head px-2 py-2.5 w-44">Status</th>
                   <th className="text-table-head px-2 py-2.5 w-44">Rating</th>
                   <th className="text-table-head px-2 py-2.5 w-44">Note</th>
@@ -166,6 +188,7 @@ export default async function AttendancePage({ searchParams }: PageProps) {
                       rating={perfMap.get(s.id) ?? null}
                       notes={a?.notes ?? null}
                       xFactorCount={xMap.get(s.id) ?? 0}
+                      lastStatus={prevStatusByStudent.get(s.id) ?? null}
                     />
                   );
                 })}

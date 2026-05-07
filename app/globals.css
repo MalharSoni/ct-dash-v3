@@ -2,6 +2,10 @@
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
+@custom-variant data-horizontal (&[data-orientation="horizontal"]);
+@custom-variant data-vertical (&[data-orientation="vertical"]);
+@custom-variant data-active (&[data-state="active"]);
+@custom-variant data-checked (&[data-state="checked"]);
 
 @theme inline {
   /* Color slots — shadcn-compatible */
@@ -192,4 +196,12 @@
 
 @utility shadow-card-hover {
   box-shadow: 0 4px 12px rgba(0,0,0,.10);
+}
+
+@utility no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }

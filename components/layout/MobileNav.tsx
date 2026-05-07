@@ -21,10 +21,10 @@ export function MobileNav({ title, actions }: Props) {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="h-full px-3 flex items-center justify-between gap-2">
+    <div className="h-full px-3 flex items-center gap-2">
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetTrigger asChild>
-          <Button variant="ghost" size="icon" className="size-9">
+          <Button variant="ghost" size="icon" className="size-9 shrink-0">
             <Menu size={18} />
           </Button>
         </SheetTrigger>
@@ -38,11 +38,15 @@ export function MobileNav({ title, actions }: Props) {
         </SheetContent>
       </Sheet>
 
-      <h1 className="text-[15px] font-extrabold tracking-tight text-foreground truncate flex-1">
+      <h1 className="text-[15px] font-extrabold tracking-tight text-foreground truncate min-w-0 flex-1">
         {title}
       </h1>
 
-      <div className="flex items-center gap-1.5 shrink-0">{actions}</div>
+      {actions && (
+        <div className="flex items-center gap-1.5 shrink-0 max-w-[55%] overflow-x-auto no-scrollbar [&_button]:shrink-0 [&_a]:shrink-0">
+          {actions}
+        </div>
+      )}
     </div>
   );
 }

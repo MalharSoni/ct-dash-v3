@@ -97,3 +97,14 @@ export async function setStudentTrack(id: string, track: StudentTrack) {
   revalidatePath(`/students/${id}`);
   revalidatePath("/foundation");
 }
+
+export async function bulkSetStudentTrack(ids: string[], track: StudentTrack) {
+  if (ids.length === 0) return;
+  await prisma.student.updateMany({
+    where: { id: { in: ids } },
+    data: { track },
+  });
+  revalidatePath("/students");
+  revalidatePath("/foundation");
+  for (const id of ids) revalidatePath(`/students/${id}`);
+}

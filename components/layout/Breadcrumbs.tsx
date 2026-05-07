@@ -29,6 +29,10 @@ export function Breadcrumbs() {
   // Don't show on the public /c page
   if (segs[0] === "c") return null;
 
+  // Top-level pages: title in the topbar already says where you are.
+  // Only render breadcrumbs once you're at least one level deep.
+  if (segs.length < 2) return null;
+
   const crumbs = segs.map((seg, i) => {
     const href = "/" + segs.slice(0, i + 1).join("/");
     const label = LABELS[seg] ?? abbrev(seg);
