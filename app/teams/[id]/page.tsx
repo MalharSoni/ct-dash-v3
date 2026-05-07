@@ -40,7 +40,7 @@ export default async function TeamDetailPage({ params }: PageProps) {
   const candidates = await prisma.student.findMany({
     where: {
       active: true,
-      track: { in: ["FOUNDATION", "PROJECTS"] },
+      tracks: { hasSome: ["FOUNDATION", "PROJECTS"] },
     },
     select: { id: true, firstName: true, lastName: true },
     orderBy: [{ lastName: "asc" }, { firstName: "asc" }],

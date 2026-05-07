@@ -46,7 +46,7 @@ export default async function AttendancePage({ searchParams }: PageProps) {
     prevAttendance,
   ] = await Promise.all([
     prisma.student.findMany({
-      where: { active: true, track: { in: ["FOUNDATION", "PROJECTS"] } },
+      where: { active: true, tracks: { hasSome: ["FOUNDATION", "PROJECTS"] } },
       orderBy: [{ track: "asc" }, { lastName: "asc" }],
     }),
     prisma.attendanceRecord.findMany({ where: { sessionId: session.id } }),

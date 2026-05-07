@@ -166,7 +166,7 @@ export default async function StudentDetailPage({ params }: PageProps) {
                 <h2 className="text-[22px] font-extrabold tracking-tight text-foreground">
                   {student.firstName} {student.lastName}
                 </h2>
-                <TrackSwitcher studentId={student.id} current={student.track} />
+                <TrackSwitcher studentId={student.id} current={student.tracks} />
                 {!student.active && (
                   <span className="inline-flex items-center px-2 py-0.5 rounded text-[10.5px] font-bold uppercase tracking-[0.03em] border bg-mute-3 text-mute-1 border-mute-3">
                     Inactive
@@ -242,8 +242,9 @@ export default async function StudentDetailPage({ params }: PageProps) {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-4">
-          {/* Left — tabs */}
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4 items-start">
+          {/* Left — tabs. min-h on the content area keeps the right sidebar
+              from visually shifting when switching tabs. */}
           <Tabs defaultValue="overview" className="space-y-3 min-w-0">
             <TabsList className="max-w-full overflow-x-auto no-scrollbar justify-start">
               <TabsTrigger value="overview">Overview</TabsTrigger>
@@ -261,162 +262,165 @@ export default async function StudentDetailPage({ params }: PageProps) {
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="overview" className="space-y-4 mt-4">
-              <div className="bg-card border border-border rounded-[var(--radius)] shadow-card p-5 space-y-4">
-                <h3 className="text-section-header">Contact</h3>
-                <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-[13px]">
-                  <ContactRow icon={Mail} label="Email" value={student.email} />
-                  <ContactRow icon={Phone} label="Phone" value={student.phone} />
-                  <ContactRow
-                    icon={Users2}
-                    label="Parent / Guardian"
-                    value={student.parentName}
-                  />
-                  <ContactRow
-                    icon={Mail}
-                    label="Parent email"
-                    value={student.parentEmail}
-                    mailto
-                  />
-                  <ContactRow
-                    icon={Phone}
-                    label="Parent phone"
-                    value={student.parentPhone}
-                    tel
-                  />
-                </dl>
+            <div className="min-h-[420px]">
+              <TabsContent value="overview" className="space-y-4 mt-4">
+                <div className="bg-card border border-border rounded-[var(--radius)] shadow-card p-5 space-y-3">
+                  <h3 className="text-section-header">Performance trend</h3>
+                  <PerformanceTrend items={historyItems} />
+                </div>
 
                 {student.notes && (
-                  <>
-                    <h3 className="text-section-header pt-2">Notes</h3>
+                  <div className="bg-card border border-border rounded-[var(--radius)] shadow-card p-5 space-y-2">
+                    <h3 className="text-section-header">About</h3>
                     <p className="text-[13px] whitespace-pre-wrap text-foreground">
                       {student.notes}
                     </p>
-                  </>
+                  </div>
                 )}
-              </div>
+              </TabsContent>
 
-              <div className="bg-card border border-border rounded-[var(--radius)] shadow-card p-5 space-y-3">
-                <h3 className="text-section-header">Performance trend</h3>
-                <PerformanceTrend items={historyItems} />
-              </div>
-
-              {(student.teamMemberships.length > 0 ||
-                student.projectMembers.length > 0) && (
-                <div className="bg-card border border-border rounded-[var(--radius)] shadow-card p-5 space-y-3">
-                  <h3 className="text-section-header">Memberships</h3>
-                  {student.teamMemberships.length > 0 && (
-                    <div className="space-y-1.5">
-                      <div className="text-[10.5px] uppercase tracking-[0.05em] font-bold text-mute-1">
-                        Teams
-                      </div>
-                      <ul className="space-y-1">
-                        {student.teamMemberships.map((m) => (
-                          <li key={m.id}>
-                            <Link
-                              href={`/teams/${m.team.id}`}
-                              className="flex items-center gap-2 text-[13px] hover:underline"
-                            >
-                              <Trophy size={12} className="text-mute-1" />
-                              <span className="font-mono font-bold">
-                                {m.team.teamNumber}
-                              </span>
-                              <span>{m.team.name}</span>
-                              <span className="text-[11px] text-mute-1 ml-auto">
-                                {m.role}
-                              </span>
-                            </Link>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                  {student.projectMembers.length > 0 && (
-                    <div className="space-y-1.5">
-                      <div className="text-[10.5px] uppercase tracking-[0.05em] font-bold text-mute-1">
-                        Projects
-                      </div>
-                      <ul className="space-y-1">
-                        {student.projectMembers.map((m) => (
-                          <li key={m.id}>
-                            <Link
-                              href={`/projects/${m.project.id}`}
-                              className="flex items-center gap-2 text-[13px] hover:underline"
-                            >
-                              <FolderKanban size={12} className="text-mute-1" />
-                              <span>{m.project.name}</span>
-                              {m.role && (
-                                <span className="text-[11px] text-mute-1 ml-auto">
-                                  {m.role}
-                                </span>
-                              )}
-                            </Link>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
+              <TabsContent value="notes" className="mt-4">
+                <div className="bg-card border border-border rounded-[var(--radius)] shadow-card p-5">
+                  <CoachNotesFeed
+                    studentId={student.id}
+                    notes={student.coachNotes.map((n) => ({
+                      id: n.id,
+                      body: n.body,
+                      pinned: n.pinned,
+                      createdAt: n.createdAt.toISOString(),
+                      coach: { name: n.coach.name },
+                    }))}
+                  />
                 </div>
-              )}
-            </TabsContent>
+              </TabsContent>
 
-            <TabsContent value="notes" className="mt-4">
-              <div className="bg-card border border-border rounded-[var(--radius)] shadow-card p-5">
-                <CoachNotesFeed
-                  studentId={student.id}
-                  notes={student.coachNotes.map((n) => ({
-                    id: n.id,
-                    body: n.body,
-                    pinned: n.pinned,
-                    createdAt: n.createdAt.toISOString(),
-                    coach: { name: n.coach.name },
-                  }))}
-                />
-              </div>
-            </TabsContent>
+              <TabsContent value="attendance" className="mt-4">
+                <div className="bg-card border border-border rounded-[var(--radius)] shadow-card p-5">
+                  <AttendanceHistory items={historyItems} />
+                </div>
+              </TabsContent>
 
-            <TabsContent value="attendance" className="mt-4">
-              <div className="bg-card border border-border rounded-[var(--radius)] shadow-card p-5">
-                <AttendanceHistory items={historyItems} />
-              </div>
-            </TabsContent>
+              <TabsContent value="xfactor" className="mt-4">
+                <div className="bg-card border border-border rounded-[var(--radius)] shadow-card p-5">
+                  <XFactorFeed
+                    notes={student.xFactorNotes.map((n) => ({
+                      id: n.id,
+                      note: n.note,
+                      tags: n.tags,
+                      createdAt: n.createdAt.toISOString(),
+                      recordedBy: { name: n.recordedBy.name },
+                      sessionDate: n.session?.date.toISOString() ?? null,
+                    }))}
+                  />
+                </div>
+              </TabsContent>
 
-            <TabsContent value="xfactor" className="mt-4">
-              <div className="bg-card border border-border rounded-[var(--radius)] shadow-card p-5">
-                <XFactorFeed
-                  notes={student.xFactorNotes.map((n) => ({
-                    id: n.id,
-                    note: n.note,
-                    tags: n.tags,
-                    createdAt: n.createdAt.toISOString(),
-                    recordedBy: { name: n.recordedBy.name },
-                    sessionDate: n.session?.date.toISOString() ?? null,
-                  }))}
-                />
-              </div>
-            </TabsContent>
-
-            <TabsContent value="skills" className="mt-4">
-              <div className="bg-card border border-border rounded-[var(--radius)] shadow-card p-5">
-                <SkillsManager
-                  studentId={student.id}
-                  skills={student.studentSkills.map((s) => ({
-                    id: s.id,
-                    level: s.level,
-                    evidence: s.evidence,
-                    skill: {
-                      id: s.skill.id,
-                      name: s.skill.name,
-                      category: s.skill.category,
-                    },
-                  }))}
-                />
-              </div>
-            </TabsContent>
+              <TabsContent value="skills" className="mt-4">
+                <div className="bg-card border border-border rounded-[var(--radius)] shadow-card p-5">
+                  <SkillsManager
+                    studentId={student.id}
+                    skills={student.studentSkills.map((s) => ({
+                      id: s.id,
+                      level: s.level,
+                      evidence: s.evidence,
+                      skill: {
+                        id: s.skill.id,
+                        name: s.skill.name,
+                        category: s.skill.category,
+                      },
+                    }))}
+                  />
+                </div>
+              </TabsContent>
+            </div>
           </Tabs>
 
-          {/* Right — sidebar */}
-          <aside className="space-y-4">
+          {/* Right — sidebar (Contact, Memberships, Reports). Sticky-ish on
+              tall pages so it doesn't drift far below the tabs. */}
+          <aside className="space-y-4 lg:sticky lg:top-[calc(var(--topbar-height)+16px)]">
+            <div className="bg-card border border-border rounded-[var(--radius)] shadow-card p-5 space-y-3">
+              <h3 className="text-section-header">Contact</h3>
+              <dl className="space-y-2.5 text-[13px]">
+                <ContactRow icon={Mail} label="Email" value={student.email} mailto />
+                <ContactRow icon={Phone} label="Phone" value={student.phone} tel />
+                <ContactRow
+                  icon={Users2}
+                  label="Parent / Guardian"
+                  value={student.parentName}
+                />
+                <ContactRow
+                  icon={Mail}
+                  label="Parent email"
+                  value={student.parentEmail}
+                  mailto
+                />
+                <ContactRow
+                  icon={Phone}
+                  label="Parent phone"
+                  value={student.parentPhone}
+                  tel
+                />
+              </dl>
+            </div>
+
+            {(student.teamMemberships.length > 0 ||
+              student.projectMembers.length > 0) && (
+              <div className="bg-card border border-border rounded-[var(--radius)] shadow-card p-5 space-y-3">
+                <h3 className="text-section-header">Memberships</h3>
+                {student.teamMemberships.length > 0 && (
+                  <div className="space-y-1.5">
+                    <div className="text-[10.5px] uppercase tracking-[0.05em] font-bold text-mute-1">
+                      Teams
+                    </div>
+                    <ul className="space-y-1">
+                      {student.teamMemberships.map((m) => (
+                        <li key={m.id}>
+                          <Link
+                            href={`/teams/${m.team.id}`}
+                            className="flex items-center gap-2 text-[13px] hover:underline"
+                          >
+                            <Trophy size={12} className="text-mute-1" />
+                            <span className="font-mono font-bold">
+                              {m.team.teamNumber}
+                            </span>
+                            <span className="truncate">{m.team.name}</span>
+                            <span className="text-[11px] text-mute-1 ml-auto shrink-0">
+                              {m.role}
+                            </span>
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {student.projectMembers.length > 0 && (
+                  <div className="space-y-1.5">
+                    <div className="text-[10.5px] uppercase tracking-[0.05em] font-bold text-mute-1">
+                      Projects
+                    </div>
+                    <ul className="space-y-1">
+                      {student.projectMembers.map((m) => (
+                        <li key={m.id}>
+                          <Link
+                            href={`/projects/${m.project.id}`}
+                            className="flex items-center gap-2 text-[13px] hover:underline"
+                          >
+                            <FolderKanban size={12} className="text-mute-1" />
+                            <span className="truncate">{m.project.name}</span>
+                            {m.role && (
+                              <span className="text-[11px] text-mute-1 ml-auto shrink-0">
+                                {m.role}
+                              </span>
+                            )}
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="bg-card border border-border rounded-[var(--radius)] shadow-card p-5 space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="text-section-header">Report cards</h3>

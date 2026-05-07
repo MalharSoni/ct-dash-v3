@@ -32,7 +32,9 @@ export default async function StudentsPage({ searchParams }: PageProps) {
     : "ALL";
 
   const where: Prisma.StudentWhereInput = {};
-  if (trackFilter !== "ALL") where.track = trackFilter;
+  if (trackFilter !== "ALL") {
+    where.tracks = { has: trackFilter };
+  }
   if (q) {
     where.OR = [
       { firstName: { contains: q, mode: "insensitive" } },
@@ -41,25 +43,28 @@ export default async function StudentsPage({ searchParams }: PageProps) {
     ];
   }
 
-  const [students, counts] = await Promise.all([
+  // Pull all students once for the filter counts. Counting per-track via
+  // groupBy doesn't work cleanly when a student can be on multiple tracks —
+  // a student in [FOUNDATION, PROJECTS] should bump both counts.
+  const [students, allForCounts] = await Promise.all([
     prisma.student.findMany({
       where,
       orderBy: [{ active: "desc" }, { lastName: "asc" }],
       take: 200,
     }),
-    prisma.student.groupBy({
-      by: ["track"],
-      _count: true,
-    }),
+    prisma.student.findMany({ select: { tracks: true } }),
   ]);
 
-  const countByTrack: Record<string, number> = { ALL: 0 };
-  let total = 0;
-  for (const c of counts) {
-    countByTrack[c.track] = c._count;
-    total += c._count;
+  const countByTrack: Record<string, number> = {
+    ALL: allForCounts.length,
+    FOUNDATION: 0,
+    PROJECTS: 0,
+    GRADUATED: 0,
+    INACTIVE: 0,
+  };
+  for (const s of allForCounts) {
+    for (const t of s.tracks) countByTrack[t] = (countByTrack[t] ?? 0) + 1;
   }
-  countByTrack.ALL = total;
 
   return (
     <AppShell
@@ -163,6 +168,7 @@ export default async function StudentsPage({ searchParams }: PageProps) {
               email: s.email,
               grade: s.grade,
               track: s.track,
+              tracks: s.tracks,
               joinedAt: s.joinedAt.toISOString(),
               active: s.active,
             }))}

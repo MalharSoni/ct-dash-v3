@@ -45,6 +45,7 @@ export interface StudentRow {
   email: string | null;
   grade: number | null;
   track: StudentTrack;
+  tracks: StudentTrack[];
   joinedAt: string; // ISO
   active: boolean;
 }
@@ -221,14 +222,19 @@ export function StudentsTable({ students }: Props) {
                     {s.grade ? `Gr. ${s.grade}` : "—"}
                   </td>
                   <td className="px-4 py-2.5">
-                    <span
-                      className={cn(
-                        "inline-flex items-center px-2 py-0.5 rounded text-[10.5px] font-bold uppercase tracking-[0.03em] border",
-                        TRACK_BADGE[s.track]
-                      )}
-                    >
-                      {TRACK_LABEL[s.track]}
-                    </span>
+                    <div className="flex flex-wrap gap-1">
+                      {(s.tracks.length > 0 ? s.tracks : [s.track]).map((t) => (
+                        <span
+                          key={t}
+                          className={cn(
+                            "inline-flex items-center px-2 py-0.5 rounded text-[10.5px] font-bold uppercase tracking-[0.03em] border",
+                            TRACK_BADGE[t]
+                          )}
+                        >
+                          {TRACK_LABEL[t]}
+                        </span>
+                      ))}
+                    </div>
                   </td>
                   <td className="px-4 py-2.5 text-mute-1 text-[12px]">
                     {format(new Date(s.joinedAt), "MMM d, yyyy")}

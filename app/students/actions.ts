@@ -51,7 +51,7 @@ function clean<T extends Record<string, unknown>>(obj: T) {
 export async function createStudent(input: unknown) {
   const data = schema.parse(input);
   const student = await prisma.student.create({
-    data: clean(data) as never,
+    data: { ...clean(data), tracks: [data.track] } as never,
   });
   revalidatePath("/students");
   revalidatePath("/foundation");
@@ -60,9 +60,19 @@ export async function createStudent(input: unknown) {
 
 export async function updateStudent(id: string, input: unknown) {
   const data = schema.parse(input);
+  // Preserve any extra tracks the student already has — only ensure the form's
+  // primary track is included. Coaches change multi-select via the inline
+  // TrackSwitcher, not this form.
+  const existing = await prisma.student.findUnique({
+    where: { id },
+    select: { tracks: true },
+  });
+  const tracks = existing
+    ? Array.from(new Set([data.track, ...existing.tracks]))
+    : [data.track];
   await prisma.student.update({
     where: { id },
-    data: clean(data) as never,
+    data: { ...clean(data), tracks } as never,
   });
   revalidatePath("/students");
   revalidatePath(`/students/${id}`);
@@ -72,7 +82,7 @@ export async function updateStudent(id: string, input: unknown) {
 export async function deactivateStudent(id: string) {
   await prisma.student.update({
     where: { id },
-    data: { active: false, track: "INACTIVE" },
+    data: { active: false, track: "INACTIVE", tracks: ["INACTIVE"] },
   });
   revalidatePath("/students");
   revalidatePath(`/students/${id}`);
@@ -88,21 +98,42 @@ export async function reactivateStudent(id: string) {
   revalidatePath(`/students/${id}`);
 }
 
-export async function setStudentTrack(id: string, track: StudentTrack) {
+/**
+ * Set the full set of tracks a student is on. The first non-end-state track
+ * (i.e. not GRADUATED/INACTIVE) is mirrored into the legacy `track` column so
+ * existing reads keep working. Empty arrays fall back to FOUNDATION so the DB
+ * is never left in a "no track" state.
+ */
+function pickPrimary(tracks: StudentTrack[]): StudentTrack {
+  if (tracks.length === 0) return "FOUNDATION";
+  // Prefer an active track; only fall through to end-state if that's all there is.
+  const active = tracks.find((t) => t !== "GRADUATED" && t !== "INACTIVE");
+  return active ?? tracks[0];
+}
+
+export async function setStudentTracks(id: string, tracks: StudentTrack[]) {
+  // Dedupe + drop empty.
+  const next = Array.from(new Set(tracks)) as StudentTrack[];
+  const safe = next.length === 0 ? (["FOUNDATION"] as StudentTrack[]) : next;
   await prisma.student.update({
     where: { id },
-    data: { track },
+    data: { tracks: safe, track: pickPrimary(safe) },
   });
   revalidatePath("/students");
   revalidatePath(`/students/${id}`);
   revalidatePath("/foundation");
 }
 
+/** Convenience: replace tracks with a single value. */
+export async function setStudentTrack(id: string, track: StudentTrack) {
+  await setStudentTracks(id, [track]);
+}
+
 export async function bulkSetStudentTrack(ids: string[], track: StudentTrack) {
   if (ids.length === 0) return;
   await prisma.student.updateMany({
     where: { id: { in: ids } },
-    data: { track },
+    data: { track, tracks: [track] },
   });
   revalidatePath("/students");
   revalidatePath("/foundation");

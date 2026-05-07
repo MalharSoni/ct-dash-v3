@@ -64,11 +64,11 @@ async function getDashboardStats() {
     prisma.student.count({
       where: {
         active: true,
-        track: { in: ["FOUNDATION", "PROJECTS"] },
+        tracks: { hasSome: ["FOUNDATION", "PROJECTS"] },
       },
     }),
     prisma.student.count({
-      where: { active: true, track: "FOUNDATION" },
+      where: { active: true, tracks: { has: "FOUNDATION" } },
     }),
     prisma.trialStudent.count({
       where: {
@@ -88,11 +88,11 @@ async function getDashboardStats() {
     prisma.student.count({
       where: {
         joinedAt: { gte: thirtyDaysAgo },
-        track: { in: ["FOUNDATION", "PROJECTS"] },
+        tracks: { hasSome: ["FOUNDATION", "PROJECTS"] },
       },
     }),
     prisma.student.count({
-      where: { joinedAt: { gte: thirtyDaysAgo }, track: "FOUNDATION" },
+      where: { joinedAt: { gte: thirtyDaysAgo }, tracks: { has: "FOUNDATION" } },
     }),
     prisma.trialStudent.count({
       where: { createdAt: { gte: sevenDaysAgo } },

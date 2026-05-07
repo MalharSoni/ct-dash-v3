@@ -50,7 +50,12 @@ model Student {
   parentPhone String?
   grade       Int?
   gradYear    Int?
-  track       StudentTrack @default(FOUNDATION)
+  // Primary track (legacy). Kept synced to tracks[0] for backwards-compatible
+  // display. New code should read `tracks` and write through setStudentTracks.
+  track       StudentTrack   @default(FOUNDATION)
+  // Multi-select. A student can be on Foundation AND Projects simultaneously.
+  // GRADUATED / INACTIVE are typically exclusive, enforced in the UI.
+  tracks      StudentTrack[] @default([FOUNDATION])
   joinedAt    DateTime     @default(now())
   active      Boolean      @default(true)
   notes       String?

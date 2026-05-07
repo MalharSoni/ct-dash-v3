@@ -36,7 +36,7 @@ export default async function ProjectDetailPage({ params }: PageProps) {
   if (!project) notFound();
 
   const candidates = await prisma.student.findMany({
-    where: { active: true, track: { in: ["FOUNDATION", "PROJECTS"] } },
+    where: { active: true, tracks: { hasSome: ["FOUNDATION", "PROJECTS"] } },
     select: { id: true, firstName: true, lastName: true },
     orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
   });

@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 
 export default async function FoundationPage() {
   const students = await prisma.student.findMany({
-    where: { track: "FOUNDATION", active: true },
+    where: { tracks: { has: "FOUNDATION" }, active: true },
     orderBy: [{ joinedAt: "desc" }, { lastName: "asc" }],
   });
 

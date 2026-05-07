@@ -23,7 +23,7 @@ export async function bulkCreateReports(input: unknown) {
   end.setUTCHours(23, 59, 59, 0);
 
   const students = await prisma.student.findMany({
-    where: { active: true, track: { in: data.tracks } },
+    where: { active: true, tracks: { hasSome: data.tracks } },
   });
 
   let created = 0;
