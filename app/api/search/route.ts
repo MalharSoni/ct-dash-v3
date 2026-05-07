@@ -16,6 +16,12 @@ export async function GET(req: Request) {
         { parentName: { contains: q, mode: "insensitive" } },
       ],
     },
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      track: true,
+    },
     take: 8,
     orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
   });
