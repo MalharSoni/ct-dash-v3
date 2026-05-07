@@ -1,0 +1,538 @@
+// CT Dash V3 — MVP schema
+// Designed for Caution Tape Robotics coach workflow.
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─────────────────────────── COACHES ───────────────────────────
+// No auth in MVP — coaches are just records used for "recorded by" stamps.
+
+model Coach {
+  id        String   @id @default(cuid())
+  name      String
+  email     String?  @unique
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  trialAssessments  TrialAssessment[]
+  attendanceRecords AttendanceRecord[]
+  performances      DailyPerformance[]
+  xFactorNotes      XFactorNote[]
+  weeklyProgress    WeeklyProgress[]
+  coachNotes        CoachNote[]
+  createdProjects   Project[]
+}
+
+// ─────────────────────────── STUDENTS ───────────────────────────
+
+enum StudentTrack {
+  FOUNDATION
+  PROJECTS
+  GRADUATED
+  INACTIVE
+}
+
+model Student {
+  id          String       @id @default(cuid())
+  firstName   String
+  lastName    String
+  email       String?
+  phone       String?
+  parentName  String?
+  parentEmail String?
+  parentPhone String?
+  grade       Int?
+  gradYear    Int?
+  track       StudentTrack @default(FOUNDATION)
+  joinedAt    DateTime     @default(now())
+  active      Boolean      @default(true)
+  notes       String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  teamMemberships  TeamMember[]
+  attendance       AttendanceRecord[]
+  performance      DailyPerformance[]
+  xFactorNotes     XFactorNote[]
+  studentSkills    StudentSkill[]
+  coachNotes       CoachNote[]
+  reportCards      ReportCard[]
+  projectMembers   ProjectMember[]
+  weeklyProgress   WeeklyProgress[]
+
+  @@index([track, active])
+  @@index([lastName, firstName])
+}
+
+// ─────────────────────────── TRIAL STUDENTS ───────────────────────────
+
+enum TrialStatus {
+  SCHEDULED
+  ATTENDED
+  NO_SHOW
+  CONVERTED
+  DECLINED
+}
+
+model TrialStudent {
+  id          String      @id @default(cuid())
+  firstName   String
+  lastName    String
+  parentName  String?
+  parentEmail String?
+  parentPhone String?
+  grade       Int?
+  scheduledAt DateTime
+  timeslot    String
+  status      TrialStatus @default(SCHEDULED)
+  notes       String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  assessment TrialAssessment?
+
+  @@index([scheduledAt, status])
+}
+
+model TrialAssessment {
+  id             String   @id @default(cuid())
+  trialStudentId String   @unique
+  trialStudent   TrialStudent @relation(fields: [trialStudentId], references: [id], onDelete: Cascade)
+  coachId        String
+  coach          Coach    @relation(fields: [coachId], references: [id])
+
+  enthusiasm     Int      // 1–5
+  capability     Int      // 1–5
+  fitNotes       String
+  recommend      Boolean
+  submittedAt    DateTime @default(now())
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+// ─────────────────────────── SEASONS & TEAMS ───────────────────────────
+
+model Season {
+  id        String    @id @default(cuid())
+  name      String    // "Push Back 2025-26"
+  current   Boolean   @default(false)
+  startDate DateTime
+  endDate   DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  teams     Team[]
+}
+
+model Team {
+  id          String   @id @default(cuid())
+  name        String
+  teamNumber  String
+  description String?
+  active      Boolean  @default(true)
+  seasonId    String
+  season      Season   @relation(fields: [seasonId], references: [id])
+
+  members     TeamMember[]
+  tasks       TeamTask[]
+  events      TeamEvent[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([teamNumber, seasonId])
+}
+
+enum TeamEventType {
+  PRACTICE
+  SCRIMMAGE
+  COMPETITION
+  BUILD_DAY
+  MEETING
+  OTHER
+}
+
+model TeamEvent {
+  id        String        @id @default(cuid())
+  teamId    String
+  team      Team          @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  type      TeamEventType @default(PRACTICE)
+  title     String
+  startAt   DateTime
+  endAt     DateTime?
+  location  String?
+  notes     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([teamId, startAt])
+}
+
+enum TeamRole {
+  CAPTAIN
+  DRIVER
+  PROGRAMMER
+  BUILDER
+  STRATEGIST
+  NOTEBOOK
+  MEMBER
+}
+
+model TeamMember {
+  id        String   @id @default(cuid())
+  teamId    String
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  studentId String
+  student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  role      TeamRole @default(MEMBER)
+  joinedAt  DateTime @default(now())
+  active    Boolean  @default(true)
+
+  tasks     TeamTask[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([teamId, studentId])
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  REVIEW
+  DONE
+  BLOCKED
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+model TeamTask {
+  id          String     @id @default(cuid())
+  title       String
+  description String?
+  status      TaskStatus @default(TODO)
+  priority    Priority   @default(MEDIUM)
+  dueDate     DateTime?
+  completedAt DateTime?
+
+  teamId      String
+  team        Team       @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  assigneeId  String?
+  assignee    TeamMember? @relation(fields: [assigneeId], references: [id], onDelete: SetNull)
+
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([teamId, status])
+}
+
+// ─────────────────────────── PROJECTS ───────────────────────────
+
+enum ProjectStatus {
+  PLANNING
+  ACTIVE
+  COMPLETED
+  ARCHIVED
+}
+
+model Project {
+  id          String        @id @default(cuid())
+  name        String
+  description String?
+  status      ProjectStatus @default(PLANNING)
+  startDate   DateTime      @default(now())
+  endDate     DateTime?
+  active      Boolean       @default(true)
+
+  createdById String
+  createdBy   Coach         @relation(fields: [createdById], references: [id])
+
+  members        ProjectMember[]
+  weeklyProgress WeeklyProgress[]
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model ProjectMember {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  studentId String
+  student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  role      String?  // free-text e.g. "CAD lead", "Programmer"
+  joinedAt  DateTime @default(now())
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([projectId, studentId])
+}
+
+model WeeklyProgress {
+  id         String   @id @default(cuid())
+  projectId  String
+  project    Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  weekOf     DateTime // Monday of the week
+  notes      String
+  blockers   String?
+
+  studentId  String?
+  student    Student? @relation(fields: [studentId], references: [id], onDelete: SetNull)
+
+  loggedById String
+  loggedBy   Coach    @relation(fields: [loggedById], references: [id])
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([projectId, weekOf])
+}
+
+// ─────────────────────────── SESSIONS / ATTENDANCE ───────────────────────────
+
+model Session {
+  id        String   @id @default(cuid())
+  date      DateTime
+  notes     String?
+
+  attendance        AttendanceRecord[]
+  performance       DailyPerformance[]
+  xFactorNotes      XFactorNote[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([date])
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  EXCUSED
+}
+
+model AttendanceRecord {
+  id           String           @id @default(cuid())
+  sessionId    String
+  session      Session          @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  studentId    String
+  student      Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  status       AttendanceStatus
+  arrivedAt    DateTime?
+  notes        String?
+
+  recordedById String
+  recordedBy   Coach            @relation(fields: [recordedById], references: [id])
+
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  @@unique([sessionId, studentId])
+}
+
+model DailyPerformance {
+  id           String   @id @default(cuid())
+  sessionId    String
+  session      Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  studentId    String
+  student      Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  rating       Int      // 1–5
+  notes        String?
+
+  recordedById String
+  recordedBy   Coach    @relation(fields: [recordedById], references: [id])
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([sessionId, studentId])
+}
+
+model XFactorNote {
+  id           String   @id @default(cuid())
+  sessionId    String?
+  session      Session? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  studentId    String
+  student      Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  note         String
+  tags         String[] @default([])
+
+  recordedById String
+  recordedBy   Coach    @relation(fields: [recordedById], references: [id])
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([studentId, createdAt])
+}
+
+// ─────────────────────────── SKILLS ───────────────────────────
+
+model Skill {
+  id          String   @id @default(cuid())
+  name        String
+  category    String   // "Mechanical", "Programming", "Design", etc — free-form for MVP
+  description String?
+  order       Int      @default(0)
+
+  studentSkills StudentSkill[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([category, name])
+}
+
+enum SkillLevel {
+  NONE
+  LEARNING
+  PROFICIENT
+  EXPERT
+}
+
+model StudentSkill {
+  id         String     @id @default(cuid())
+  studentId  String
+  student    Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  skillId    String
+  skill      Skill      @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  level      SkillLevel @default(NONE)
+  evidence   String?
+  verifiedAt DateTime?
+  verifiedBy String?
+
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  @@unique([studentId, skillId])
+}
+
+// ─────────────────────────── COACH NOTES & REPORT CARDS ───────────────────────────
+
+model CoachNote {
+  id        String   @id @default(cuid())
+  studentId String
+  student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  coachId   String
+  coach     Coach    @relation(fields: [coachId], references: [id])
+
+  body      String
+  pinned    Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([studentId, createdAt])
+}
+
+model ReportCard {
+  id            String    @id @default(cuid())
+  studentId     String
+  student       Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  periodStart   DateTime
+  periodEnd     DateTime
+
+  attendancePct Float?
+  overallRating Int?      // 1–5
+  narrative     String?
+  goals         String?
+
+  publishedAt   DateTime?
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([studentId, periodEnd])
+}
+
+// ─────────────────────────── CURRICULUM ───────────────────────────
+// Saturday × Timeslot matrix. The /c public link exposes a read-only
+// view of this data so it can be shared with parents.
+
+model CurriculumTimeslot {
+  id        String   @id @default(cuid())
+  name      String   // "Morning 1", "Foundation AM", etc — coach-editable
+  startTime String   // "09:00"
+  endTime   String   // "11:00"
+  order     Int      @unique // 0-3 for the 4 columns
+  active    Boolean  @default(true)
+
+  entries   CurriculumEntry[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model CurriculumWeek {
+  id        String   @id @default(cuid())
+  saturday  DateTime // The Saturday this row represents
+  label     String?  // Optional override (e.g. "Pre-Season Wk 1")
+  isBreak   Boolean  @default(false)
+  breakNote String?  // "Civic Holiday" — shown when isBreak=true
+  notes     String?
+
+  entries   CurriculumEntry[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([saturday])
+  @@index([saturday])
+}
+
+enum CurriculumPhase {
+  FOUNDATION
+  VRC
+  PROJECT
+  COMPETITION
+  GENERAL
+}
+
+model CurriculumEntry {
+  id          String          @id @default(cuid())
+  weekId      String
+  week        CurriculumWeek  @relation(fields: [weekId], references: [id], onDelete: Cascade)
+  timeslotId  String
+  timeslot    CurriculumTimeslot @relation(fields: [timeslotId], references: [id], onDelete: Cascade)
+
+  title       String
+  description String?
+  phase       CurriculumPhase @default(GENERAL)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([weekId, timeslotId])
+}
+
+// ─────────────────────────── ORG SETTINGS ───────────────────────────
+// Singleton row that stores branding/copy used in shared surfaces
+// (public curriculum page header, report card footer, etc.)
+
+model OrgSettings {
+  id              String   @id @default(cuid())
+  orgName         String   @default("Caution Tape Robotics")
+  publicHeading   String   @default("Curriculum schedule")
+  publicTagline   String   @default("What we cover each Saturday, by timeslot.")
+  reportFooter    String   @default("Coach's assessment, not an academic grade.")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
