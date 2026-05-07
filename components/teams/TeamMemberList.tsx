@@ -92,6 +92,41 @@ export function TeamMemberList({ teamId, members, candidates }: Props) {
 
   return (
     <div className="space-y-3">
+      {available.length > 0 && (
+        <div className="space-y-2">
+          <Select value={pickStudent} onValueChange={setPickStudent}>
+            <SelectTrigger>
+              <SelectValue placeholder="Add a student…" />
+            </SelectTrigger>
+            <SelectContent>
+              {available.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.firstName} {c.lastName}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <div className="flex gap-2">
+            <Select value={pickRole} onValueChange={(v) => setPickRole(v as TeamRole)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {ROLES.map((r) => (
+                  <SelectItem key={r.value} value={r.value}>
+                    {r.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button size="sm" onClick={handleAdd} disabled={isPending} className="shrink-0">
+              {isPending ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
+              Add
+            </Button>
+          </div>
+        </div>
+      )}
+
       {members.length === 0 ? (
         <p className="text-[12.5px] text-mute-1">No members yet.</p>
       ) : (
@@ -112,7 +147,7 @@ export function TeamMemberList({ teamId, members, candidates }: Props) {
                 </div>
               </div>
               <Select value={m.role} onValueChange={(v) => changeRole(m.id, v as TeamRole)}>
-                <SelectTrigger className="w-32 h-8 text-[12px]">
+                <SelectTrigger className="w-[110px] h-8 text-[12px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -127,46 +162,13 @@ export function TeamMemberList({ teamId, members, candidates }: Props) {
                 type="button"
                 onClick={() => remove(m.id)}
                 disabled={isPending}
-                className="size-7 rounded-md text-mute-1 hover:bg-card hover:text-destructive transition-colors grid place-items-center"
+                className="size-7 shrink-0 rounded-md text-mute-1 hover:bg-card hover:text-destructive transition-colors grid place-items-center"
               >
                 <X size={13} />
               </button>
             </li>
           ))}
         </ul>
-      )}
-
-      {available.length > 0 && (
-        <div className="border-t border-border pt-3 grid grid-cols-[1fr_130px_auto] gap-2">
-          <Select value={pickStudent} onValueChange={setPickStudent}>
-            <SelectTrigger>
-              <SelectValue placeholder="Add a student…" />
-            </SelectTrigger>
-            <SelectContent>
-              {available.map((c) => (
-                <SelectItem key={c.id} value={c.id}>
-                  {c.firstName} {c.lastName}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={pickRole} onValueChange={(v) => setPickRole(v as TeamRole)}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {ROLES.map((r) => (
-                <SelectItem key={r.value} value={r.value}>
-                  {r.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button size="sm" onClick={handleAdd} disabled={isPending}>
-            {isPending ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
-            Add
-          </Button>
-        </div>
       )}
     </div>
   );
