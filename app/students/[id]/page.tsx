@@ -22,10 +22,11 @@ import { AppShell } from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/button";
 import { AvatarInitials } from "@/components/ui/avatar-initials";
 import { CoachNotesFeed } from "@/components/students/CoachNotesFeed";
+import { PerformanceTrend } from "@/components/students/AttendanceHistory";
 import {
-  AttendanceHistory,
-  PerformanceTrend,
-} from "@/components/students/AttendanceHistory";
+  SessionLog,
+  type SessionLogEntry,
+} from "@/components/students/SessionLog";
 import { XFactorFeed } from "@/components/students/XFactorFeed";
 import { SkillsManager } from "@/components/students/SkillsManager";
 import { TrackSwitcher } from "@/components/students/TrackSwitcher";
@@ -85,44 +86,55 @@ export default async function StudentDetailPage({ params }: PageProps) {
 
   if (!student) notFound();
 
-  // Build attendance history items: merge attendance + performance + x-factor by session.
-  const sessionMap = new Map<
-    string,
-    {
-      date: string;
-      status: typeof student.attendance[number]["status"] | null;
-      rating: number | null;
-      hasXFactor: boolean;
+  // Build per-session log: one entry per session date, merging attendance
+  // status, performance rating, the in-row session note, and any x-factor
+  // notes captured that session. The same entries also feed the performance
+  // trend and the per-session stats below.
+  const sessionMap = new Map<string, SessionLogEntry>();
+  function ensure(sessionId: string, isoDate: string): SessionLogEntry {
+    let entry = sessionMap.get(sessionId);
+    if (!entry) {
+      entry = {
+        date: isoDate,
+        status: null,
+        rating: null,
+        note: null,
+        xFactors: [],
+      };
+      sessionMap.set(sessionId, entry);
     }
-  >();
+    return entry;
+  }
   for (const a of student.attendance) {
-    sessionMap.set(a.session.id, {
-      date: a.session.date.toISOString(),
-      status: a.status,
-      rating: null,
-      hasXFactor: false,
-    });
+    const entry = ensure(a.session.id, a.session.date.toISOString());
+    entry.status = a.status;
+    entry.note = a.notes;
   }
   for (const p of student.performance) {
-    const existing = sessionMap.get(p.sessionId);
-    if (existing) existing.rating = p.rating;
-    else
-      sessionMap.set(p.sessionId, {
-        date: p.session.date.toISOString(),
-        status: null,
-        rating: p.rating,
-        hasXFactor: false,
-      });
+    const entry = ensure(p.sessionId, p.session.date.toISOString());
+    entry.rating = p.rating;
   }
   for (const xf of student.xFactorNotes) {
-    if (xf.sessionId) {
-      const existing = sessionMap.get(xf.sessionId);
-      if (existing) existing.hasXFactor = true;
-    }
+    if (!xf.sessionId || !xf.session) continue;
+    const entry = ensure(xf.sessionId, xf.session.date.toISOString());
+    entry.xFactors.push({
+      id: xf.id,
+      note: xf.note,
+      tags: xf.tags,
+      recordedBy: { name: xf.recordedBy.name },
+    });
   }
-  const historyItems = Array.from(sessionMap.values()).sort(
+  const sessionEntries = Array.from(sessionMap.values()).sort(
     (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
   );
+
+  // Lightweight {date, rating} series for the trend sparkline.
+  const trendItems = sessionEntries.map((e) => ({
+    date: e.date,
+    status: e.status,
+    rating: e.rating,
+    hasXFactor: e.xFactors.length > 0,
+  }));
 
   const presentCount = student.attendance.filter((a) => a.status === "PRESENT").length;
   const attendanceRate = student.attendance.length > 0
@@ -261,9 +273,9 @@ export default async function StudentDetailPage({ params }: PageProps) {
                 count={student.coachNotes.length}
               />
               <CardTab
-                value="attendance"
-                label="Attendance"
-                count={historyItems.length}
+                value="sessions"
+                label="Sessions"
+                count={sessionEntries.length}
               />
               <CardTab
                 value="xfactor"
@@ -283,7 +295,7 @@ export default async function StudentDetailPage({ params }: PageProps) {
             >
               <div className="space-y-2">
                 <h3 className="text-section-header">Performance trend</h3>
-                <PerformanceTrend items={historyItems} />
+                <PerformanceTrend items={trendItems} />
               </div>
               {student.notes && (
                 <div className="space-y-2 border-t border-border pt-4">
@@ -312,10 +324,10 @@ export default async function StudentDetailPage({ params }: PageProps) {
             </TabsContent>
 
             <TabsContent
-              value="attendance"
+              value="sessions"
               className="p-5 outline-none focus-visible:ring-0"
             >
-              <AttendanceHistory items={historyItems} />
+              <SessionLog entries={sessionEntries} />
             </TabsContent>
 
             <TabsContent
