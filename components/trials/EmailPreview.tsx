@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Copy } from "lucide-react";
+import { Check, Copy, Mail } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 
@@ -19,8 +19,9 @@ export function EmailPreview({ subject, body, html, to }: Props) {
 
   /**
    * Rich copy: writes both text/html and text/plain to the clipboard so
-   * Gmail / Outlook / Apple Mail paste with formatting (bold, headings,
-   * tables) intact, while a plain-text editor still gets readable output.
+   * Outlook / Gmail / Apple Mail paste with formatting (bold, callouts,
+   * cost table, CTA button) intact, while a plain-text editor still gets
+   * readable output.
    */
   async function copyRich() {
     try {
@@ -35,7 +36,7 @@ export function EmailPreview({ subject, body, html, to }: Props) {
         await navigator.clipboard.writeText(body);
       }
       setCopied("rich");
-      toast.success("Email copied — paste into your mail client");
+      toast.success("Email copied — paste into Outlook compose");
       setTimeout(() => setCopied(null), 2200);
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Copy failed");
@@ -66,18 +67,31 @@ export function EmailPreview({ subject, body, html, to }: Props) {
 
   return (
     <div className="space-y-4">
+      {/* Primary action: one-click copy of the full formatted email body. */}
+      <div className="bg-card border border-border rounded-[var(--radius)] shadow-card p-4 flex flex-wrap items-center gap-3">
+        <Button size="lg" onClick={copyRich} className="font-semibold">
+          {copied === "rich" ? (
+            <Check size={16} />
+          ) : (
+            <Mail size={16} />
+          )}
+          {copied === "rich" ? "Copied — paste into Outlook" : "Copy email for Outlook"}
+        </Button>
+        <div className="text-[12.5px] text-mute-1 leading-snug">
+          Open a new Outlook message, paste the subject above into the subject line,
+          <br className="hidden sm:inline" />
+          then paste the email into the body. Formatting will carry over.
+        </div>
+      </div>
+
       <div className="flex flex-wrap gap-2">
-        <Button size="sm" onClick={copyRich}>
-          {copied === "rich" ? <Check size={14} /> : <Copy size={14} />}
-          {copied === "rich" ? "Copied" : "Copy email (formatted)"}
-        </Button>
-        <Button size="sm" variant="outline" onClick={copyPlain}>
-          {copied === "plain" ? <Check size={14} /> : <Copy size={14} />}
-          {copied === "plain" ? "Copied" : "Copy plain text"}
-        </Button>
         <Button size="sm" variant="outline" onClick={copySubject}>
           {copied === "subject" ? <Check size={14} /> : <Copy size={14} />}
-          {copied === "subject" ? "Copied" : "Copy subject"}
+          {copied === "subject" ? "Subject copied" : "Copy subject"}
+        </Button>
+        <Button size="sm" variant="ghost" onClick={copyPlain}>
+          {copied === "plain" ? <Check size={14} /> : <Copy size={14} />}
+          {copied === "plain" ? "Copied" : "Copy plain text"}
         </Button>
       </div>
 

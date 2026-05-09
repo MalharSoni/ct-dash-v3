@@ -94,113 +94,85 @@ function renderAccept(i: EmailInputs): RenderedEmail {
     `WhatsApp: ${org.whatsappNumber}`,
   ].join("\n");
 
-  const html = `<!DOCTYPE html>
-<html lang="en">
-<head><meta charset="utf-8" /><title>${escapeHtml(subject)}</title></head>
-<body style="margin:0;padding:0;background:#F5F5F5;font-family:'Segoe UI',Inter,system-ui,-apple-system,sans-serif;color:#171717;line-height:1.55;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#F5F5F5;padding:24px 12px;">
-    <tr><td align="center">
-      <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="background:#FFFFFF;border:1px solid #E5E5E5;border-radius:10px;overflow:hidden;">
+  // Outlook (Word renderer) strips border-radius, <code> backgrounds,
+  // text-decoration-thickness, and ignores most CSS that's wrapped in <style>.
+  // This template is designed to be copy-pasted directly into Outlook
+  // compose: no outer page chrome, all inline styles, sharp corners, and
+  // colored "border" stripes are real <td>s instead of border-left on a
+  // single cell (which Outlook drops).
+  const html = renderShell(
+    subject,
+    `<p style="margin:0 0 14px 0;font-size:15px;">Hi ${escapeHtml(parent.firstName)},</p>
+    <p style="margin:0 0 22px 0;font-size:18px;line-height:1.45;">
+      Quick update: <strong>${escapeHtml(student.firstName)} had a great trial today</strong>, and we'd love to enroll him in our <strong>${escapeHtml(org.programName)}</strong>.
+    </p>
 
-        <!-- Brand bar -->
-        <tr><td style="background:#171717;padding:14px 20px;color:#F5D000;font-weight:800;letter-spacing:0.04em;font-size:13px;">
-          ${escapeHtml(org.senderCompany)}
-        </td></tr>
+    ${calloutBlock(
+      `What Coach noticed about ${escapeHtml(student.firstName)}`,
+      escapeHtml(coachParagraph),
+      "#F5D000",
+      "#FFFBDC"
+    )}
 
-        <!-- Body -->
-        <tr><td style="padding:28px 28px 8px 28px;">
-          <p style="margin:0 0 14px 0;font-size:15px;">Hi ${escapeHtml(parent.firstName)},</p>
-          <p style="margin:0 0 22px 0;font-size:18px;line-height:1.45;">
-            Quick update: <strong style="text-decoration:underline;text-decoration-color:#F5D000;text-decoration-thickness:3px;text-underline-offset:3px;">${escapeHtml(student.firstName)} had a great trial today</strong>, and we'd love to enroll him in our <strong>${escapeHtml(org.programName)}</strong>.
-          </p>
+    ${ctaButton(`Register ${escapeHtml(student.firstName)} →`, org.registrationUrl)}
 
-          <!-- Coach quote -->
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 26px 0;">
-            <tr><td style="border-left:4px solid #F5D000;background:#FFFBDC;padding:16px 18px;border-radius:6px;">
-              <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:#525252;margin-bottom:8px;">
-                What Coach noticed about ${escapeHtml(student.firstName)}
-              </div>
-              <div style="font-size:15px;color:#171717;line-height:1.55;">${escapeHtml(coachParagraph)}</div>
-            </td></tr>
-          </table>
+    ${sectionHeader("What happens next")}
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 26px 0;border-collapse:collapse;font-size:15px;line-height:1.55;">
+      ${stepRow(
+        "1",
+        `<strong>Register</strong> on the portal (link above).`
+      )}
+      ${stepRow(
+        "2",
+        `<strong>Send the ${escapeHtml(org.materialDepositLabel)} material deposit</strong> by Interac e-Transfer to <strong><u>${escapeHtml(org.materialPaymentEmail)}</u></strong>. In the e-Transfer message, write: &ldquo;Foundation &mdash; ${escapeHtml(student.fullName)} &mdash; ${escapeHtml(startDateLabel)}&rdquo;.`
+      )}
+      ${stepRow(
+        "3",
+        `<strong>You&rsquo;ll get a confirmation</strong> from us, plus an invite to our ${escapeHtml(org.programName)} parents&rsquo; WeChat group.`,
+        true
+      )}
+    </table>
 
-          <!-- CTA -->
-          <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 28px 0;">
-            <tr><td style="background:#F5D000;border-radius:6px;">
-              <a href="${escapeAttr(org.registrationUrl)}" style="display:inline-block;padding:14px 26px;font-weight:800;color:#171717;text-decoration:none;font-size:15px;letter-spacing:0.01em;">
-                Register ${escapeHtml(student.firstName)} →
-              </a>
-            </td></tr>
-          </table>
+    ${sectionHeader("What it costs")}
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 8px 0;border-collapse:collapse;font-size:14px;border:1px solid #E5E5E5;">
+      <tr bgcolor="#FFFBDC" style="background:#FFFBDC;">
+        <td width="35%" style="padding:10px 12px;border-bottom:1px solid #E5E5E5;"><strong>Now</strong></td>
+        <td style="padding:10px 12px;border-bottom:1px solid #E5E5E5;">Material deposit</td>
+        <td align="right" style="padding:10px 12px;border-bottom:1px solid #E5E5E5;font-weight:700;white-space:nowrap;">${escapeHtml(org.materialDepositLabel)}</td>
+      </tr>
+      <tr>
+        <td style="padding:10px 12px;border-bottom:1px solid #E5E5E5;">Monthly (auto)</td>
+        <td style="padding:10px 12px;border-bottom:1px solid #E5E5E5;">${escapeHtml(org.programName)} membership</td>
+        <td align="right" style="padding:10px 12px;border-bottom:1px solid #E5E5E5;font-weight:700;white-space:nowrap;">${escapeHtml(org.monthlyFeeLabel)}</td>
+      </tr>
+      <tr>
+        <td style="padding:10px 12px;border-bottom:1px solid #E5E5E5;">End of ${escapeHtml(org.foundationDurationLabel)} Foundation</td>
+        <td style="padding:10px 12px;border-bottom:1px solid #E5E5E5;">Material balance</td>
+        <td align="right" style="padding:10px 12px;border-bottom:1px solid #E5E5E5;font-weight:700;white-space:nowrap;">${escapeHtml(org.materialBalanceLabel)}</td>
+      </tr>
+      <tr>
+        <td style="padding:10px 12px;">Every 2 years</td>
+        <td style="padding:10px 12px;">Material refresh</td>
+        <td align="right" style="padding:10px 12px;font-weight:700;white-space:nowrap;">${escapeHtml(org.materialRefreshLabel)}</td>
+      </tr>
+    </table>
+    <p style="margin:0 0 26px 0;font-size:13px;color:#525252;">All e-Transfers &rarr; <strong><u>${escapeHtml(org.materialPaymentEmail)}</u></strong></p>
 
-          <!-- Next steps -->
-          <h3 style="margin:0 0 12px 0;font-size:15px;font-weight:800;color:#171717;text-transform:uppercase;letter-spacing:0.06em;border-bottom:2px solid #171717;padding-bottom:6px;">What happens next</h3>
-          <ol style="margin:0 0 26px 0;padding-left:22px;font-size:15px;line-height:1.55;">
-            <li style="margin-bottom:10px;">
-              <strong>Register</strong> on the portal (link above).
-            </li>
-            <li style="margin-bottom:10px;">
-              <strong>Send the <u>${escapeHtml(org.materialDepositLabel)}</u> material deposit</strong> by Interac e-Transfer to <code style="background:#F5F5F5;padding:2px 6px;border-radius:3px;font-size:13.5px;">${escapeHtml(org.materialPaymentEmail)}</code>. In the e-Transfer message, write: <em>"Foundation — ${escapeHtml(student.fullName)} — ${escapeHtml(startDateLabel)}"</em>.
-            </li>
-            <li>
-              <strong>You'll get a confirmation</strong> from us, plus an invite to our ${escapeHtml(org.programName)} parents' WeChat group.
-            </li>
-          </ol>
+    ${sectionHeader("Logistics")}
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 26px 0;border-collapse:collapse;font-size:15px;line-height:1.55;">
+      <tr><td style="padding:0 0 8px 0;">&#128205; ${escapeHtml(org.programAddress)}</td></tr>
+      <tr><td style="padding:0 0 8px 0;">&#128275; 24/7 facility access for enrolled students</td></tr>
+      <tr><td style="padding:0;">&#128172; Questions? WhatsApp <strong><u>${escapeHtml(org.whatsappNumber)}</u></strong>, or just reply to this email.</td></tr>
+    </table>
 
-          <!-- Cost table -->
-          <h3 style="margin:0 0 12px 0;font-size:15px;font-weight:800;color:#171717;text-transform:uppercase;letter-spacing:0.06em;border-bottom:2px solid #171717;padding-bottom:6px;">What it costs</h3>
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #E5E5E5;border-radius:8px;border-collapse:separate;font-size:14px;margin:0 0 8px 0;">
-            <tr style="background:#FFFBDC;">
-              <td style="padding:10px 12px;border-bottom:1px solid #E5E5E5;width:40%;"><strong>Now</strong></td>
-              <td style="padding:10px 12px;border-bottom:1px solid #E5E5E5;">Material deposit</td>
-              <td style="padding:10px 12px;border-bottom:1px solid #E5E5E5;text-align:right;font-weight:700;">${escapeHtml(org.materialDepositLabel)}</td>
-            </tr>
-            <tr>
-              <td style="padding:10px 12px;border-bottom:1px solid #E5E5E5;">Monthly (auto)</td>
-              <td style="padding:10px 12px;border-bottom:1px solid #E5E5E5;">${escapeHtml(org.programName)} membership</td>
-              <td style="padding:10px 12px;border-bottom:1px solid #E5E5E5;text-align:right;font-weight:700;">${escapeHtml(org.monthlyFeeLabel)}</td>
-            </tr>
-            <tr>
-              <td style="padding:10px 12px;border-bottom:1px solid #E5E5E5;">End of ${escapeHtml(org.foundationDurationLabel)} Foundation</td>
-              <td style="padding:10px 12px;border-bottom:1px solid #E5E5E5;">Material balance</td>
-              <td style="padding:10px 12px;border-bottom:1px solid #E5E5E5;text-align:right;font-weight:700;">${escapeHtml(org.materialBalanceLabel)}</td>
-            </tr>
-            <tr>
-              <td style="padding:10px 12px;">Every 2 years</td>
-              <td style="padding:10px 12px;">Material refresh</td>
-              <td style="padding:10px 12px;text-align:right;font-weight:700;">${escapeHtml(org.materialRefreshLabel)}</td>
-            </tr>
-          </table>
-          <p style="margin:0 0 26px 0;font-size:13px;color:#525252;">All e-Transfers → <strong><u>${escapeHtml(org.materialPaymentEmail)}</u></strong></p>
+    <p style="margin:0 0 24px 0;color:#525252;font-size:13.5px;font-style:italic;">
+      Bonus: if you&rsquo;re thinking about ${escapeHtml(student.firstName)}&rsquo;s university and career path, our AI coding program complements the ${escapeHtml(org.programName)} well &mdash; <a href="${escapeAttr(org.aiProgramUrl)}" style="color:#2563EB;text-decoration:underline;">portfolio.ct839.com</a>.
+    </p>
 
-          <!-- Logistics -->
-          <h3 style="margin:0 0 12px 0;font-size:15px;font-weight:800;color:#171717;text-transform:uppercase;letter-spacing:0.06em;border-bottom:2px solid #171717;padding-bottom:6px;">Logistics</h3>
-          <ul style="margin:0 0 26px 0;padding-left:22px;font-size:15px;line-height:1.55;">
-            <li style="margin-bottom:8px;">📍 ${escapeHtml(org.programAddress)}</li>
-            <li style="margin-bottom:8px;">🔓 24/7 facility access for enrolled students</li>
-            <li>💬 Questions? WhatsApp <strong><u>${escapeHtml(org.whatsappNumber)}</u></strong>, or just reply to this email.</li>
-          </ul>
+    <p style="margin:0 0 22px 0;font-size:16px;font-weight:600;">Welcome aboard. Looking forward to seeing ${escapeHtml(student.firstName)} next Saturday.</p>
 
-          <!-- Bonus -->
-          <p style="margin:0 0 24px 0;padding:14px 16px;background:#F5F5F5;border-radius:6px;font-size:13.5px;color:#404040;">
-            <em>Bonus: if you're thinking about ${escapeHtml(student.firstName)}'s university and career path, our AI coding program complements the ${escapeHtml(org.programName)} well — <a href="${escapeAttr(org.aiProgramUrl)}" style="color:#2563EB;text-decoration:underline;">portfolio.ct839.com</a>.</em>
-          </p>
-
-          <p style="margin:0 0 6px 0;font-size:16px;font-weight:600;">Welcome aboard. Looking forward to seeing ${escapeHtml(student.firstName)} next Saturday.</p>
-        </td></tr>
-
-        <!-- Signature -->
-        <tr><td style="padding:14px 28px 28px 28px;border-top:1px solid #E5E5E5;color:#525252;font-size:13px;">
-          <strong style="color:#171717;">— ${escapeHtml(org.senderName)}</strong><br />
-          ${escapeHtml(org.senderCompany)}<br />
-          ${escapeHtml(org.programAddress)}<br />
-          WhatsApp: ${escapeHtml(org.whatsappNumber)}
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
-</body>
-</html>`;
+    ${signature(org)}`
+  );
 
   return { subject, to: parent.email, html, text };
 }
@@ -227,46 +199,119 @@ function renderNotYet(i: EmailInputs): RenderedEmail {
     org.programAddress,
   ].join("\n");
 
-  const html = `<!DOCTYPE html>
-<html lang="en">
-<head><meta charset="utf-8" /><title>${escapeHtml(subject)}</title></head>
-<body style="margin:0;padding:0;background:#F5F5F5;font-family:'Segoe UI',Inter,system-ui,-apple-system,sans-serif;color:#171717;line-height:1.55;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#F5F5F5;padding:24px 12px;">
-    <tr><td align="center">
-      <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="background:#FFFFFF;border:1px solid #E5E5E5;border-radius:10px;overflow:hidden;">
-        <tr><td style="background:#171717;padding:14px 20px;color:#F5D000;font-weight:800;letter-spacing:0.04em;font-size:13px;">
-          ${escapeHtml(org.senderCompany)}
-        </td></tr>
-        <tr><td style="padding:28px;">
-          <p style="margin:0 0 14px 0;font-size:15px;">Hi ${escapeHtml(parent.firstName)},</p>
-          <p style="margin:0 0 18px 0;font-size:15px;">
-            Thank you for bringing ${escapeHtml(student.firstName)} in for a trial today. Here's what our coach observed:
-          </p>
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 22px 0;">
-            <tr><td style="border-left:4px solid #A3A3A3;background:#F5F5F5;padding:14px 16px;border-radius:6px;font-size:14.5px;">
-              ${escapeHtml(coachParagraph)}
-            </td></tr>
-          </table>
-          <p style="margin:0 0 18px 0;font-size:15px;">
-            We'd love to stay in touch and welcome ${escapeHtml(student.firstName)} back when the timing is right. If you have questions about the path forward, just reply to this email or message us on WhatsApp at <strong>${escapeHtml(org.whatsappNumber)}</strong>.
-          </p>
-          <p style="margin:0;font-size:15px;">Thanks again,</p>
-        </td></tr>
-        <tr><td style="padding:14px 28px 28px 28px;border-top:1px solid #E5E5E5;color:#525252;font-size:13px;">
-          <strong style="color:#171717;">— ${escapeHtml(org.senderName)}</strong><br />
-          ${escapeHtml(org.senderCompany)}<br />
-          ${escapeHtml(org.programAddress)}
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
-</body>
-</html>`;
+  const html = renderShell(
+    subject,
+    `<p style="margin:0 0 14px 0;font-size:15px;">Hi ${escapeHtml(parent.firstName)},</p>
+    <p style="margin:0 0 18px 0;font-size:15px;">
+      Thank you for bringing ${escapeHtml(student.firstName)} in for a trial today. Here&rsquo;s what our coach observed:
+    </p>
+
+    ${calloutBlock(null, escapeHtml(coachParagraph), "#A3A3A3", "#F5F5F5")}
+
+    <p style="margin:0 0 18px 0;font-size:15px;">
+      We&rsquo;d love to stay in touch and welcome ${escapeHtml(student.firstName)} back when the timing is right. If you have questions about the path forward, just reply to this email or message us on WhatsApp at <strong><u>${escapeHtml(org.whatsappNumber)}</u></strong>.
+    </p>
+    <p style="margin:0 0 22px 0;font-size:15px;">Thanks again,</p>
+
+    ${signature(org)}`
+  );
 
   return { subject, to: parent.email, html, text };
 }
 
 // ──────────────────────────── helpers ────────────────────────────
+
+/**
+ * Wraps body content in a minimal Outlook-friendly shell. No outer page
+ * frame (gray bg, centered card, brand bar) — those don't survive Outlook
+ * compose paste. Just an html doc with system-font base styles so the
+ * iframe preview renders close to what the recipient/Outlook will show.
+ */
+function renderShell(subject: string, body: string): string {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>${escapeHtml(subject)}</title>
+</head>
+<body style="margin:0;padding:24px;background:#FFFFFF;font-family:'Segoe UI',Calibri,Arial,sans-serif;color:#171717;line-height:1.55;">
+<div style="max-width:640px;margin:0 auto;font-family:'Segoe UI',Calibri,Arial,sans-serif;color:#171717;font-size:15px;line-height:1.55;">
+${body}
+</div>
+</body>
+</html>`;
+}
+
+/** Uppercase section header with a bottom rule. Outlook-safe (no border-radius). */
+function sectionHeader(label: string): string {
+  return `<p style="margin:0 0 14px 0;font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:#171717;border-bottom:2px solid #171717;padding-bottom:6px;">${escapeHtml(label)}</p>`;
+}
+
+/**
+ * A "quote" callout — a colored stripe (real <td>, not border-left) plus
+ * a tinted bg cell. Outlook drops border-left on a single cell, but a thin
+ * sibling cell with bgcolor renders reliably.
+ */
+function calloutBlock(
+  label: string | null,
+  innerHtml: string,
+  stripeColor: string,
+  bgColor: string
+): string {
+  const labelRow = label
+    ? `<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#525252;margin:0 0 6px 0;">${label}</div>`
+    : "";
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 26px 0;border-collapse:collapse;">
+<tr>
+<td width="4" bgcolor="${stripeColor}" style="background:${stripeColor};width:4px;font-size:0;line-height:0;mso-line-height-rule:exactly;">&nbsp;</td>
+<td bgcolor="${bgColor}" style="background:${bgColor};padding:14px 18px;">
+${labelRow}
+<div style="font-size:15px;color:#171717;line-height:1.55;">${innerHtml}</div>
+</td>
+</tr>
+</table>`;
+}
+
+/**
+ * CTA button rendered as a table cell with bgcolor + a styled <a>.
+ * Outlook respects the bgcolor attribute on td even when CSS background
+ * is stripped, so the button keeps its color in compose paste.
+ */
+function ctaButton(label: string, href: string): string {
+  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 28px 0;border-collapse:collapse;">
+<tr>
+<td bgcolor="#F5D000" style="background:#F5D000;padding:14px 28px;">
+<a href="${escapeAttr(href)}" style="color:#171717;text-decoration:none;font-weight:800;font-size:15px;letter-spacing:0.01em;">${label}</a>
+</td>
+</tr>
+</table>`;
+}
+
+/**
+ * One numbered step rendered as a 2-column table row (number + body).
+ * More reliable than <ol> in Outlook, which often drops list-style or
+ * collapses indentation.
+ */
+function stepRow(number: string, innerHtml: string, last: boolean = false): string {
+  const padBottom = last ? "0" : "12px";
+  return `<tr>
+<td valign="top" width="28" style="padding:0 0 ${padBottom} 0;font-weight:800;color:#171717;font-size:15px;">${number}.</td>
+<td valign="top" style="padding:0 0 ${padBottom} 0;">${innerHtml}</td>
+</tr>`;
+}
+
+/** Signature block — bottom rule + sender info. */
+function signature(org: EmailInputs["org"]): string {
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0;border-collapse:collapse;border-top:1px solid #E5E5E5;">
+<tr><td style="padding:14px 0 0 0;color:#525252;font-size:13.5px;line-height:1.55;">
+<strong style="color:#171717;font-size:14px;">&mdash; ${escapeHtml(org.senderName)}</strong><br />
+${escapeHtml(org.senderCompany)}<br />
+${escapeHtml(org.programAddress)}<br />
+WhatsApp: ${escapeHtml(org.whatsappNumber)}
+</td></tr>
+</table>`;
+}
 
 function escapeHtml(s: string): string {
   return s
