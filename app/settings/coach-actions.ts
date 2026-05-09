@@ -92,6 +92,40 @@ export async function updateOrgSettings(input: unknown) {
   revalidatePath("/c");
 }
 
+const emailDefaultsSchema = z.object({
+  senderName: z.string().trim().min(1).max(80),
+  senderCompany: z.string().trim().min(1).max(120),
+  programName: z.string().trim().min(1).max(80),
+  programAddress: z.string().trim().min(1).max(200),
+  whatsappNumber: z.string().trim().min(1).max(40),
+  registrationUrl: z.string().trim().url(),
+  aiProgramUrl: z.string().trim().url(),
+  materialPaymentEmail: z.string().trim().email(),
+  monthlyFeeLabel: z.string().trim().min(1).max(40),
+  materialDepositLabel: z.string().trim().min(1).max(40),
+  materialBalanceLabel: z.string().trim().min(1).max(40),
+  materialRefreshLabel: z.string().trim().min(1).max(40),
+  foundationDurationLabel: z.string().trim().min(1).max(40),
+  emailCcList: z
+    .array(z.string().trim().email())
+    .max(10),
+});
+
+export async function updateEmailDefaults(input: unknown) {
+  const data = emailDefaultsSchema.parse(input);
+  const existing = await prisma.orgSettings.findFirst();
+  if (!existing) {
+    await prisma.orgSettings.create({ data });
+  } else {
+    await prisma.orgSettings.update({
+      where: { id: existing.id },
+      data,
+    });
+  }
+  revalidatePath("/settings");
+  revalidatePath("/trial-students");
+}
+
 const timeslotCreate = z.object({
   name: z.string().trim().min(1).max(40),
   startTime: z.string().regex(/^\d{2}:\d{2}$/),

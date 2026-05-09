@@ -119,6 +119,10 @@ model TrialAssessment {
   recommend      Boolean
   submittedAt    DateTime @default(now())
 
+  // Set when the admin marks the parent acceptance email as sent.
+  emailSentAt    DateTime?
+  emailSentById  String?
+
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 }
@@ -538,6 +542,24 @@ model OrgSettings {
   publicHeading   String   @default("Curriculum schedule")
   publicTagline   String   @default("What we cover each Saturday, by timeslot.")
   reportFooter    String   @default("Coach's assessment, not an academic grade.")
+
+  // Trial-acceptance email defaults — admin edits in /settings, used to
+  // render the parent email on /trial-students/[id]/email.
+  senderName              String  @default("Ingrid Huang")
+  senderCompany           String  @default("STEM SPACE 4K EDUCATION GROUP INC.")
+  programName             String  @default("High School Program")
+  programAddress          String  @default("205 Riviera Drive, Unit 2, Markham ON L3R 5J6")
+  whatsappNumber          String  @default("(647) 456-7788")
+  registrationUrl         String  @default("https://portal.iclasspro.com/cautiontape/class-details/87")
+  aiProgramUrl            String  @default("https://portfolio.ct839.com/en/")
+  materialPaymentEmail    String  @default("vrcparts@cautiontape.ca")
+  monthlyFeeLabel         String  @default("$475 + tax")
+  materialDepositLabel    String  @default("$200")
+  materialBalanceLabel    String  @default("$800")
+  materialRefreshLabel    String  @default("$1,000")
+  foundationDurationLabel String  @default("4-month")
+  emailCcList             String[] @default([])
+
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }

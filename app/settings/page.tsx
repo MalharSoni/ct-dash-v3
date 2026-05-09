@@ -3,6 +3,7 @@ import { SeasonsManager } from "@/components/settings/SeasonsManager";
 import { CoachesManager } from "@/components/settings/CoachesManager";
 import { TimeslotsManager } from "@/components/settings/TimeslotsManager";
 import { OrgSettingsManager } from "@/components/settings/OrgSettingsManager";
+import { EmailDefaultsManager } from "@/components/settings/EmailDefaultsManager";
 import { prisma } from "@/lib/prisma";
 import { getOrgSettings } from "./coach-actions";
 
@@ -26,6 +27,27 @@ export default async function SettingsPage() {
               publicHeading: org.publicHeading,
               publicTagline: org.publicTagline,
               reportFooter: org.reportFooter,
+            }}
+          />
+        </div>
+
+        <div className="bg-card border border-border rounded-[var(--radius)] shadow-card p-5">
+          <EmailDefaultsManager
+            defaults={{
+              senderName: org.senderName,
+              senderCompany: org.senderCompany,
+              programName: org.programName,
+              programAddress: org.programAddress,
+              whatsappNumber: org.whatsappNumber,
+              registrationUrl: org.registrationUrl,
+              aiProgramUrl: org.aiProgramUrl,
+              materialPaymentEmail: org.materialPaymentEmail,
+              monthlyFeeLabel: org.monthlyFeeLabel,
+              materialDepositLabel: org.materialDepositLabel,
+              materialBalanceLabel: org.materialBalanceLabel,
+              materialRefreshLabel: org.materialRefreshLabel,
+              foundationDurationLabel: org.foundationDurationLabel,
+              emailCcList: org.emailCcList,
             }}
           />
         </div>

@@ -150,3 +150,29 @@ export async function submitAssessment(trialStudentId: string, input: unknown) {
   revalidatePath(`/trial-students/${trialStudentId}`);
   revalidatePath("/trial-students");
 }
+
+/**
+ * Stamp the parent acceptance email as sent. The actual sending is manual
+ * (Ingrid pastes from the preview into her own email client) — this just
+ * tracks "she did it" so the trial card shows the right status.
+ */
+export async function markEmailSent(trialStudentId: string) {
+  const coach = await getCurrentCoach();
+  await prisma.trialAssessment.update({
+    where: { trialStudentId },
+    data: { emailSentAt: new Date(), emailSentById: coach.id },
+  });
+  revalidatePath(`/trial-students/${trialStudentId}`);
+  revalidatePath(`/trial-students/${trialStudentId}/email`);
+  revalidatePath("/trial-students");
+}
+
+export async function unmarkEmailSent(trialStudentId: string) {
+  await prisma.trialAssessment.update({
+    where: { trialStudentId },
+    data: { emailSentAt: null, emailSentById: null },
+  });
+  revalidatePath(`/trial-students/${trialStudentId}`);
+  revalidatePath(`/trial-students/${trialStudentId}/email`);
+  revalidatePath("/trial-students");
+}

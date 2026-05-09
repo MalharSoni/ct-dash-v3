@@ -120,7 +120,7 @@ export default async function TrialDetailPage({ params }: PageProps) {
         </div>
 
         <div className="bg-card border border-border rounded-[var(--radius)] shadow-card p-5 space-y-3">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-2">
             <h3 className="text-section-header">Coach assessment</h3>
             {trial.assessment && (
               <span className="text-[11px] text-mute-1">
@@ -131,6 +131,7 @@ export default async function TrialDetailPage({ params }: PageProps) {
           </div>
           <AssessmentForm
             trialStudentId={trial.id}
+            studentFirstName={trial.firstName}
             initial={
               trial.assessment
                 ? {
@@ -143,6 +144,35 @@ export default async function TrialDetailPage({ params }: PageProps) {
             }
           />
         </div>
+
+        {/* Compose-email card — only useful once an assessment exists. */}
+        {trial.assessment && (
+          <div
+            className={cn(
+              "bg-card border border-border rounded-[var(--radius)] shadow-card p-5 space-y-2 flex flex-wrap items-center justify-between gap-3",
+              trial.assessment.emailSentAt &&
+                "border-emerald-200 bg-emerald-50/40"
+            )}
+          >
+            <div className="min-w-0">
+              <h3 className="text-section-header">Parent email</h3>
+              <p className="text-[12.5px] text-mute-1 mt-0.5">
+                {trial.assessment.emailSentAt
+                  ? `Sent ${format(trial.assessment.emailSentAt, "MMM d, h:mm a")}.`
+                  : trial.parentEmail
+                    ? `Compose, copy, and send to ${trial.parentEmail}.`
+                    : "Add a parent email on this trial first."}
+              </p>
+            </div>
+            <Button size="sm" variant="default" asChild>
+              <Link href={`/trial-students/${trial.id}/email`}>
+                {trial.assessment.emailSentAt
+                  ? "View email"
+                  : "Compose email →"}
+              </Link>
+            </Button>
+          </div>
+        )}
       </div>
     </AppShell>
   );
