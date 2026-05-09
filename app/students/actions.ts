@@ -79,6 +79,19 @@ export async function updateStudent(id: string, input: unknown) {
   revalidatePath("/foundation");
 }
 
+/**
+ * Permanently delete a student record. Cascades through team memberships,
+ * attendance, performance, x-factor notes, skills, coach notes, project memberships,
+ * and report cards (all configured `onDelete: Cascade` in the schema).
+ */
+export async function deleteStudent(id: string) {
+  await prisma.student.delete({ where: { id } });
+  revalidatePath("/students");
+  revalidatePath("/foundation");
+  revalidatePath("/");
+  redirect("/students");
+}
+
 export async function deactivateStudent(id: string) {
   await prisma.student.update({
     where: { id },

@@ -1,6 +1,5 @@
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
-import { format } from "date-fns";
+import { notFound } from "next/navigation";
 import { ChevronLeft, Mail } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/button";
@@ -27,7 +26,6 @@ export default async function TrialEmailPage({ params }: PageProps) {
 
   if (!trial) notFound();
 
-  // Guard rails — make it obvious why the page can't render the email.
   if (!trial.assessment) {
     return (
       <AppShell title={`Email — ${trial.firstName} ${trial.lastName}`}>
@@ -41,34 +39,11 @@ export default async function TrialEmailPage({ params }: PageProps) {
       </AppShell>
     );
   }
-  if (!trial.parentEmail) {
-    return (
-      <AppShell title={`Email — ${trial.firstName} ${trial.lastName}`}>
-        <div className="space-y-3 max-w-xl">
-          <BackLink id={id} />
-          <Notice
-            title="Parent email is missing"
-            body={
-              <>
-                Add a parent email on the trial details first.{" "}
-                <Link
-                  href={`/trial-students/${id}/edit`}
-                  className="text-info hover:underline font-semibold"
-                >
-                  Edit trial →
-                </Link>
-              </>
-            }
-          />
-        </div>
-      </AppShell>
-    );
-  }
 
   const parentFirstName = pickParentFirstName(trial.parentName);
 
   const rendered = renderTrialEmail({
-    parent: { firstName: parentFirstName, email: trial.parentEmail },
+    parent: { firstName: parentFirstName, email: trial.parentEmail ?? "" },
     student: {
       firstName: trial.firstName,
       fullName: `${trial.firstName} ${trial.lastName}`,
@@ -94,21 +69,16 @@ export default async function TrialEmailPage({ params }: PageProps) {
         <div className="flex items-start gap-3 text-[12.5px] text-mute-1">
           <Mail size={14} className="mt-0.5 shrink-0" />
           <p>
-            Copy the email below into Gmail/Outlook and send to{" "}
-            <strong className="text-foreground">{trial.parentEmail}</strong>.
-            When done, click <em>Mark as sent</em> at the bottom.
+            Copy the email below and paste it into your mail client to send to{" "}
+            {trial.parentName ?? "the parent"}.
           </p>
         </div>
 
         <EmailPreview
-          trialStudentId={id}
-          rendered={rendered}
-          ccList={org.emailCcList}
-          alreadySentAt={
-            trial.assessment.emailSentAt
-              ? trial.assessment.emailSentAt.toISOString()
-              : null
-          }
+          subject={rendered.subject}
+          body={rendered.text}
+          html={rendered.html}
+          to={trial.parentEmail || null}
         />
       </div>
     </AppShell>
@@ -142,7 +112,7 @@ function Notice({
 }
 
 function pickParentFirstName(parentName: string | null): string {
-  if (!parentName) return "there"; // safest fallback
+  if (!parentName) return "there";
   const trimmed = parentName.trim();
   if (!trimmed) return "there";
   return trimmed.split(/\s+/)[0];

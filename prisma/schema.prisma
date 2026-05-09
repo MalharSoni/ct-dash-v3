@@ -40,16 +40,18 @@ enum StudentTrack {
 }
 
 model Student {
-  id          String       @id @default(cuid())
-  firstName   String
-  lastName    String
-  email       String?
-  phone       String?
-  parentName  String?
-  parentEmail String?
-  parentPhone String?
-  grade       Int?
-  gradYear    Int?
+  id           String         @id @default(cuid())
+  firstName    String
+  lastName     String
+  email        String?
+  phone        String?
+  parentName   String?
+  parentEmail  String?
+  parentPhone  String?
+  parentWechat String?
+  commPref     CommPreference @default(WHATSAPP)
+  grade        Int?
+  gradYear     Int?
   // Primary track (legacy). Kept synced to tracks[0] for backwards-compatible
   // display. New code should read `tracks` and write through setStudentTracks.
   track       StudentTrack   @default(FOUNDATION)
@@ -86,20 +88,49 @@ enum TrialStatus {
   DECLINED
 }
 
+enum CommPreference {
+  WHATSAPP
+  WECHAT
+}
+
+enum StemExperience {
+  NONE
+  SOME
+  EXPERIENCED
+}
+
+enum ReferralSource {
+  FRIEND
+  GOOGLE
+  SOCIAL_MEDIA
+  SCHOOL
+  EVENT
+  RETURNING
+  OTHER
+}
+
 model TrialStudent {
-  id          String      @id @default(cuid())
-  firstName   String
-  lastName    String
-  parentName  String?
-  parentEmail String?
-  parentPhone String?
-  grade       Int?
-  scheduledAt DateTime
-  timeslot    String
-  status      TrialStatus @default(SCHEDULED)
-  notes       String?
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  id              String           @id @default(cuid())
+  firstName       String
+  lastName        String
+  parentName      String?
+  parentEmail     String?
+  parentPhone     String?
+  parentWechat    String?
+  commPref        CommPreference   @default(WHATSAPP)
+  grade           Int?
+  birthdate       DateTime?
+  currentSchool   String?
+  stemExperience  StemExperience?
+  stemDetails     String?          // optional free text describing prior STEM
+  referralSource  ReferralSource?
+  referralDetails String?          // optional free text — "name of friend", etc.
+  scheduledAt     DateTime
+  timeslot        String
+  status          TrialStatus      @default(SCHEDULED)
+  notes           String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
 
   assessment TrialAssessment?
 
@@ -113,8 +144,13 @@ model TrialAssessment {
   coachId        String
   coach          Coach    @relation(fields: [coachId], references: [id])
 
-  enthusiasm     Int      // 1–5
-  capability     Int      // 1–5
+  enthusiasm     Int      // 1–5  (Engagement)
+  capability     Int      // 1–5  (Skill)
+  challenge      Int      @default(3) // 1–5  Challenge difficulty handled
+  attention      Int      @default(3) // 1–5  Attention to detail
+  questioning    Int      @default(3) // 1–5  Ability to ask questions
+  vexKnowledge   Int      @default(3) // 1–5  Understanding of VEX parts
+  problemSolving Int      @default(3) // 1–5  Problem solving
   fitNotes       String
   recommend      Boolean
   submittedAt    DateTime @default(now())

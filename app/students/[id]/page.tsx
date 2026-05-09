@@ -16,6 +16,7 @@ import {
   Sparkles,
   ClipboardCheck,
   StickyNote,
+  MessageCircle,
 } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,7 @@ import {
 import { XFactorFeed } from "@/components/students/XFactorFeed";
 import { SkillsManager } from "@/components/students/SkillsManager";
 import { TrackSwitcher } from "@/components/students/TrackSwitcher";
+import { RemoveStudentButton } from "@/components/students/RemoveStudentButton";
 import {
   Tabs,
   TabsContent,
@@ -83,7 +85,7 @@ export default async function StudentDetailPage({ params }: PageProps) {
 
   if (!student) notFound();
 
-  // Build attendance history items: merge attendance + performance + x-factor by session
+  // Build attendance history items: merge attendance + performance + x-factor by session.
   const sessionMap = new Map<
     string,
     {
@@ -122,7 +124,6 @@ export default async function StudentDetailPage({ params }: PageProps) {
     (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
   );
 
-  // Quick stats for the hero
   const presentCount = student.attendance.filter((a) => a.status === "PRESENT").length;
   const attendanceRate = student.attendance.length > 0
     ? Math.round((presentCount / student.attendance.length) * 100)
@@ -243,100 +244,117 @@ export default async function StudentDetailPage({ params }: PageProps) {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4 items-start">
-          {/* Left — tabs. min-h on the content area keeps the right sidebar
-              from visually shifting when switching tabs. */}
-          <Tabs defaultValue="overview" className="space-y-3 min-w-0">
-            <TabsList className="max-w-full overflow-x-auto no-scrollbar justify-start">
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="notes">
-                Notes ({student.coachNotes.length})
-              </TabsTrigger>
-              <TabsTrigger value="attendance">
-                Attendance ({historyItems.length})
-              </TabsTrigger>
-              <TabsTrigger value="xfactor">
-                X-Factor ({student.xFactorNotes.length})
-              </TabsTrigger>
-              <TabsTrigger value="skills">
-                Skills ({student.studentSkills.length})
-              </TabsTrigger>
+          {/* Left — single card with tabs as a header strip so the tabs are
+              visually attached to the content below them. */}
+          <Tabs
+            defaultValue="overview"
+            className="bg-card border border-border rounded-[var(--radius)] shadow-card overflow-hidden min-w-0"
+          >
+            <TabsList
+              variant="line"
+              className="w-full justify-start gap-0 rounded-none border-b border-border bg-card px-3 h-11"
+            >
+              <CardTab value="overview" label="Overview" />
+              <CardTab
+                value="notes"
+                label="Notes"
+                count={student.coachNotes.length}
+              />
+              <CardTab
+                value="attendance"
+                label="Attendance"
+                count={historyItems.length}
+              />
+              <CardTab
+                value="xfactor"
+                label="X-Factor"
+                count={student.xFactorNotes.length}
+              />
+              <CardTab
+                value="skills"
+                label="Skills"
+                count={student.studentSkills.length}
+              />
             </TabsList>
 
-            <div className="min-h-[420px]">
-              <TabsContent value="overview" className="space-y-4 mt-4">
-                <div className="bg-card border border-border rounded-[var(--radius)] shadow-card p-5 space-y-3">
-                  <h3 className="text-section-header">Performance trend</h3>
-                  <PerformanceTrend items={historyItems} />
+            <TabsContent
+              value="overview"
+              className="p-5 space-y-4 outline-none focus-visible:ring-0"
+            >
+              <div className="space-y-2">
+                <h3 className="text-section-header">Performance trend</h3>
+                <PerformanceTrend items={historyItems} />
+              </div>
+              {student.notes && (
+                <div className="space-y-2 border-t border-border pt-4">
+                  <h3 className="text-section-header">About</h3>
+                  <p className="text-[13px] whitespace-pre-wrap text-foreground">
+                    {student.notes}
+                  </p>
                 </div>
+              )}
+            </TabsContent>
 
-                {student.notes && (
-                  <div className="bg-card border border-border rounded-[var(--radius)] shadow-card p-5 space-y-2">
-                    <h3 className="text-section-header">About</h3>
-                    <p className="text-[13px] whitespace-pre-wrap text-foreground">
-                      {student.notes}
-                    </p>
-                  </div>
-                )}
-              </TabsContent>
+            <TabsContent
+              value="notes"
+              className="p-5 outline-none focus-visible:ring-0"
+            >
+              <CoachNotesFeed
+                studentId={student.id}
+                notes={student.coachNotes.map((n) => ({
+                  id: n.id,
+                  body: n.body,
+                  pinned: n.pinned,
+                  createdAt: n.createdAt.toISOString(),
+                  coach: { name: n.coach.name },
+                }))}
+              />
+            </TabsContent>
 
-              <TabsContent value="notes" className="mt-4">
-                <div className="bg-card border border-border rounded-[var(--radius)] shadow-card p-5">
-                  <CoachNotesFeed
-                    studentId={student.id}
-                    notes={student.coachNotes.map((n) => ({
-                      id: n.id,
-                      body: n.body,
-                      pinned: n.pinned,
-                      createdAt: n.createdAt.toISOString(),
-                      coach: { name: n.coach.name },
-                    }))}
-                  />
-                </div>
-              </TabsContent>
+            <TabsContent
+              value="attendance"
+              className="p-5 outline-none focus-visible:ring-0"
+            >
+              <AttendanceHistory items={historyItems} />
+            </TabsContent>
 
-              <TabsContent value="attendance" className="mt-4">
-                <div className="bg-card border border-border rounded-[var(--radius)] shadow-card p-5">
-                  <AttendanceHistory items={historyItems} />
-                </div>
-              </TabsContent>
+            <TabsContent
+              value="xfactor"
+              className="p-5 outline-none focus-visible:ring-0"
+            >
+              <XFactorFeed
+                notes={student.xFactorNotes.map((n) => ({
+                  id: n.id,
+                  note: n.note,
+                  tags: n.tags,
+                  createdAt: n.createdAt.toISOString(),
+                  recordedBy: { name: n.recordedBy.name },
+                  sessionDate: n.session?.date.toISOString() ?? null,
+                }))}
+              />
+            </TabsContent>
 
-              <TabsContent value="xfactor" className="mt-4">
-                <div className="bg-card border border-border rounded-[var(--radius)] shadow-card p-5">
-                  <XFactorFeed
-                    notes={student.xFactorNotes.map((n) => ({
-                      id: n.id,
-                      note: n.note,
-                      tags: n.tags,
-                      createdAt: n.createdAt.toISOString(),
-                      recordedBy: { name: n.recordedBy.name },
-                      sessionDate: n.session?.date.toISOString() ?? null,
-                    }))}
-                  />
-                </div>
-              </TabsContent>
-
-              <TabsContent value="skills" className="mt-4">
-                <div className="bg-card border border-border rounded-[var(--radius)] shadow-card p-5">
-                  <SkillsManager
-                    studentId={student.id}
-                    skills={student.studentSkills.map((s) => ({
-                      id: s.id,
-                      level: s.level,
-                      evidence: s.evidence,
-                      skill: {
-                        id: s.skill.id,
-                        name: s.skill.name,
-                        category: s.skill.category,
-                      },
-                    }))}
-                  />
-                </div>
-              </TabsContent>
-            </div>
+            <TabsContent
+              value="skills"
+              className="p-5 outline-none focus-visible:ring-0"
+            >
+              <SkillsManager
+                studentId={student.id}
+                skills={student.studentSkills.map((s) => ({
+                  id: s.id,
+                  level: s.level,
+                  evidence: s.evidence,
+                  skill: {
+                    id: s.skill.id,
+                    name: s.skill.name,
+                    category: s.skill.category,
+                  },
+                }))}
+              />
+            </TabsContent>
           </Tabs>
 
-          {/* Right — sidebar (Contact, Memberships, Reports). Sticky-ish on
-              tall pages so it doesn't drift far below the tabs. */}
+          {/* Right — sidebar (Contact, Memberships, Reports). */}
           <aside className="space-y-4 lg:sticky lg:top-[calc(var(--topbar-height)+16px)]">
             <div className="bg-card border border-border rounded-[var(--radius)] shadow-card p-5 space-y-3">
               <h3 className="text-section-header">Contact</h3>
@@ -359,6 +377,19 @@ export default async function StudentDetailPage({ params }: PageProps) {
                   label="Parent phone"
                   value={student.parentPhone}
                   tel
+                />
+                <ContactRow
+                  icon={MessageCircle}
+                  label={
+                    student.commPref === "WECHAT"
+                      ? "WeChat ID"
+                      : "Prefers WhatsApp"
+                  }
+                  value={
+                    student.commPref === "WECHAT"
+                      ? student.parentWechat
+                      : student.parentPhone
+                  }
                 />
               </dl>
             </div>
@@ -465,10 +496,51 @@ export default async function StudentDetailPage({ params }: PageProps) {
                 </ul>
               )}
             </div>
+
+            {/* Danger zone */}
+            <div className="rounded-[var(--radius)] border border-destructive/30 bg-destructive/5 p-5 space-y-3">
+              <div>
+                <h3 className="text-[13px] font-bold text-destructive">
+                  Danger zone
+                </h3>
+                <p className="text-[11.5px] text-mute-1 mt-0.5">
+                  Permanently removes this student and every record attached
+                  (notes, attendance, skills, reports). This can&apos;t be undone.
+                </p>
+              </div>
+              <RemoveStudentButton
+                studentId={student.id}
+                studentName={student.firstName}
+              />
+            </div>
           </aside>
         </div>
       </div>
     </AppShell>
+  );
+}
+
+function CardTab({
+  value,
+  label,
+  count,
+}: {
+  value: string;
+  label: string;
+  count?: number;
+}) {
+  return (
+    <TabsTrigger
+      value={value}
+      className="h-11 rounded-none px-3 text-[13px] font-semibold text-mute-1 data-active:text-foreground"
+    >
+      {label}
+      {count != null && (
+        <span className="ml-1 text-[11px] font-normal text-mute-2 tabular-nums">
+          ({count})
+        </span>
+      )}
+    </TabsTrigger>
   );
 }
 

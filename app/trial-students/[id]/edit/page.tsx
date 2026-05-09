@@ -33,10 +33,17 @@ export default async function EditTrialPage({ params }: PageProps) {
             parentName: t.parentName,
             parentEmail: t.parentEmail,
             parentPhone: t.parentPhone,
+            parentWechat: t.parentWechat,
+            commPref: t.commPref,
             grade: t.grade,
+            birthdate: t.birthdate,
+            currentSchool: t.currentSchool,
+            stemExperience: t.stemExperience,
+            stemDetails: t.stemDetails,
+            referralSource: t.referralSource,
+            referralDetails: t.referralDetails,
             scheduledAt: t.scheduledAt,
             timeslot: t.timeslot,
-            notes: t.notes,
           }}
         />
       </div>

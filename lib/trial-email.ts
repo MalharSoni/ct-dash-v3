@@ -110,37 +110,37 @@ function renderAccept(i: EmailInputs): RenderedEmail {
         <!-- Body -->
         <tr><td style="padding:28px 28px 8px 28px;">
           <p style="margin:0 0 14px 0;font-size:15px;">Hi ${escapeHtml(parent.firstName)},</p>
-          <p style="margin:0 0 18px 0;font-size:15px;">
-            Quick update: <strong>${escapeHtml(student.firstName)} had a great trial today</strong>, and we'd love to enroll him in our ${escapeHtml(org.programName)}.
+          <p style="margin:0 0 22px 0;font-size:18px;line-height:1.45;">
+            Quick update: <strong style="text-decoration:underline;text-decoration-color:#F5D000;text-decoration-thickness:3px;text-underline-offset:3px;">${escapeHtml(student.firstName)} had a great trial today</strong>, and we'd love to enroll him in our <strong>${escapeHtml(org.programName)}</strong>.
           </p>
 
           <!-- Coach quote -->
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 22px 0;">
-            <tr><td style="border-left:4px solid #F5D000;background:#FFFBDC;padding:14px 16px;border-radius:6px;">
-              <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#737373;margin-bottom:6px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 26px 0;">
+            <tr><td style="border-left:4px solid #F5D000;background:#FFFBDC;padding:16px 18px;border-radius:6px;">
+              <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:#525252;margin-bottom:8px;">
                 What Coach noticed about ${escapeHtml(student.firstName)}
               </div>
-              <div style="font-size:14.5px;color:#171717;">${escapeHtml(coachParagraph)}</div>
+              <div style="font-size:15px;color:#171717;line-height:1.55;">${escapeHtml(coachParagraph)}</div>
             </td></tr>
           </table>
 
           <!-- CTA -->
-          <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 24px 0;">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 28px 0;">
             <tr><td style="background:#F5D000;border-radius:6px;">
-              <a href="${escapeAttr(org.registrationUrl)}" style="display:inline-block;padding:12px 22px;font-weight:700;color:#171717;text-decoration:none;font-size:14px;">
+              <a href="${escapeAttr(org.registrationUrl)}" style="display:inline-block;padding:14px 26px;font-weight:800;color:#171717;text-decoration:none;font-size:15px;letter-spacing:0.01em;">
                 Register ${escapeHtml(student.firstName)} →
               </a>
             </td></tr>
           </table>
 
           <!-- Next steps -->
-          <h3 style="margin:0 0 10px 0;font-size:13px;font-weight:700;color:#171717;text-transform:uppercase;letter-spacing:0.04em;">What happens next</h3>
-          <ol style="margin:0 0 22px 0;padding-left:20px;font-size:14.5px;">
-            <li style="margin-bottom:8px;">
+          <h3 style="margin:0 0 12px 0;font-size:15px;font-weight:800;color:#171717;text-transform:uppercase;letter-spacing:0.06em;border-bottom:2px solid #171717;padding-bottom:6px;">What happens next</h3>
+          <ol style="margin:0 0 26px 0;padding-left:22px;font-size:15px;line-height:1.55;">
+            <li style="margin-bottom:10px;">
               <strong>Register</strong> on the portal (link above).
             </li>
-            <li style="margin-bottom:8px;">
-              <strong>Send the ${escapeHtml(org.materialDepositLabel)} material deposit</strong> by Interac e-Transfer to <code style="background:#F5F5F5;padding:1px 5px;border-radius:3px;font-size:13px;">${escapeHtml(org.materialPaymentEmail)}</code>. In the e-Transfer message, write: <em>"Foundation — ${escapeHtml(student.fullName)} — ${escapeHtml(startDateLabel)}"</em>.
+            <li style="margin-bottom:10px;">
+              <strong>Send the <u>${escapeHtml(org.materialDepositLabel)}</u> material deposit</strong> by Interac e-Transfer to <code style="background:#F5F5F5;padding:2px 6px;border-radius:3px;font-size:13.5px;">${escapeHtml(org.materialPaymentEmail)}</code>. In the e-Transfer message, write: <em>"Foundation — ${escapeHtml(student.fullName)} — ${escapeHtml(startDateLabel)}"</em>.
             </li>
             <li>
               <strong>You'll get a confirmation</strong> from us, plus an invite to our ${escapeHtml(org.programName)} parents' WeChat group.
@@ -148,7 +148,7 @@ function renderAccept(i: EmailInputs): RenderedEmail {
           </ol>
 
           <!-- Cost table -->
-          <h3 style="margin:0 0 10px 0;font-size:13px;font-weight:700;color:#171717;text-transform:uppercase;letter-spacing:0.04em;">What it costs</h3>
+          <h3 style="margin:0 0 12px 0;font-size:15px;font-weight:800;color:#171717;text-transform:uppercase;letter-spacing:0.06em;border-bottom:2px solid #171717;padding-bottom:6px;">What it costs</h3>
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #E5E5E5;border-radius:8px;border-collapse:separate;font-size:14px;margin:0 0 8px 0;">
             <tr style="background:#FFFBDC;">
               <td style="padding:10px 12px;border-bottom:1px solid #E5E5E5;width:40%;"><strong>Now</strong></td>
@@ -171,22 +171,22 @@ function renderAccept(i: EmailInputs): RenderedEmail {
               <td style="padding:10px 12px;text-align:right;font-weight:700;">${escapeHtml(org.materialRefreshLabel)}</td>
             </tr>
           </table>
-          <p style="margin:0 0 22px 0;font-size:13px;color:#525252;">All e-Transfers → <strong>${escapeHtml(org.materialPaymentEmail)}</strong></p>
+          <p style="margin:0 0 26px 0;font-size:13px;color:#525252;">All e-Transfers → <strong><u>${escapeHtml(org.materialPaymentEmail)}</u></strong></p>
 
           <!-- Logistics -->
-          <h3 style="margin:0 0 10px 0;font-size:13px;font-weight:700;color:#171717;text-transform:uppercase;letter-spacing:0.04em;">Logistics</h3>
-          <ul style="margin:0 0 22px 0;padding-left:20px;font-size:14.5px;">
-            <li style="margin-bottom:6px;">📍 ${escapeHtml(org.programAddress)}</li>
-            <li style="margin-bottom:6px;">🔓 24/7 facility access for enrolled students</li>
-            <li>💬 Questions? WhatsApp <strong>${escapeHtml(org.whatsappNumber)}</strong>, or just reply to this email.</li>
+          <h3 style="margin:0 0 12px 0;font-size:15px;font-weight:800;color:#171717;text-transform:uppercase;letter-spacing:0.06em;border-bottom:2px solid #171717;padding-bottom:6px;">Logistics</h3>
+          <ul style="margin:0 0 26px 0;padding-left:22px;font-size:15px;line-height:1.55;">
+            <li style="margin-bottom:8px;">📍 ${escapeHtml(org.programAddress)}</li>
+            <li style="margin-bottom:8px;">🔓 24/7 facility access for enrolled students</li>
+            <li>💬 Questions? WhatsApp <strong><u>${escapeHtml(org.whatsappNumber)}</u></strong>, or just reply to this email.</li>
           </ul>
 
           <!-- Bonus -->
-          <p style="margin:0 0 22px 0;padding:12px 14px;background:#F5F5F5;border-radius:6px;font-size:13.5px;color:#404040;">
-            <em>Bonus: if you're thinking about ${escapeHtml(student.firstName)}'s university and career path, our AI coding program complements the ${escapeHtml(org.programName)} well — <a href="${escapeAttr(org.aiProgramUrl)}" style="color:#2563EB;">portfolio.ct839.com</a>.</em>
+          <p style="margin:0 0 24px 0;padding:14px 16px;background:#F5F5F5;border-radius:6px;font-size:13.5px;color:#404040;">
+            <em>Bonus: if you're thinking about ${escapeHtml(student.firstName)}'s university and career path, our AI coding program complements the ${escapeHtml(org.programName)} well — <a href="${escapeAttr(org.aiProgramUrl)}" style="color:#2563EB;text-decoration:underline;">portfolio.ct839.com</a>.</em>
           </p>
 
-          <p style="margin:0 0 6px 0;font-size:15px;">Welcome aboard. Looking forward to seeing ${escapeHtml(student.firstName)} next Saturday.</p>
+          <p style="margin:0 0 6px 0;font-size:16px;font-weight:600;">Welcome aboard. Looking forward to seeing ${escapeHtml(student.firstName)} next Saturday.</p>
         </td></tr>
 
         <!-- Signature -->

@@ -5,7 +5,13 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getCurrentCoach } from "@/lib/current-coach";
-import type { TrialStatus, StudentTrack } from "@prisma/client";
+import type {
+  TrialStatus,
+  StudentTrack,
+  CommPreference,
+  StemExperience,
+  ReferralSource,
+} from "@prisma/client";
 
 const TRIAL_STATUSES = [
   "SCHEDULED",
@@ -15,21 +21,56 @@ const TRIAL_STATUSES = [
   "DECLINED",
 ] as const satisfies readonly TrialStatus[];
 
+const COMM_PREFS = [
+  "WHATSAPP",
+  "WECHAT",
+] as const satisfies readonly CommPreference[];
+
+const STEM_EXPERIENCES = [
+  "NONE",
+  "SOME",
+  "EXPERIENCED",
+] as const satisfies readonly StemExperience[];
+
+const REFERRAL_SOURCES = [
+  "FRIEND",
+  "GOOGLE",
+  "SOCIAL_MEDIA",
+  "SCHOOL",
+  "EVENT",
+  "RETURNING",
+  "OTHER",
+] as const satisfies readonly ReferralSource[];
+
 const trialSchema = z.object({
   firstName: z.string().trim().min(1).max(60),
   lastName: z.string().trim().min(1).max(60),
   parentName: z.string().trim().max(80).optional().nullable(),
   parentEmail: z.string().trim().email().or(z.literal("")).optional().nullable(),
   parentPhone: z.string().trim().max(30).optional().nullable(),
+  parentWechat: z.string().trim().max(80).optional().nullable(),
+  commPref: z.enum(COMM_PREFS),
   grade: z.coerce.number().int().min(1).max(13).optional().nullable(),
-  scheduledAt: z.string().min(1), // ISO yyyy-MM-ddTHH:mm
+  birthdate: z.string().optional().nullable(),
+  currentSchool: z.string().trim().max(120).optional().nullable(),
+  stemExperience: z.enum(STEM_EXPERIENCES).optional().nullable(),
+  stemDetails: z.string().trim().max(500).optional().nullable(),
+  referralSource: z.enum(REFERRAL_SOURCES).optional().nullable(),
+  referralDetails: z.string().trim().max(200).optional().nullable(),
+  // yyyy-MM-dd from a <input type="date">. We attach the timeslot label
+  // as the human-readable time of day; no clock time is collected.
+  scheduledAt: z.string().min(1),
   timeslot: z.string().trim().min(1).max(40),
-  notes: z.string().trim().max(1000).optional().nullable(),
 });
 
 const assessmentSchema = z.object({
   enthusiasm: z.coerce.number().int().min(1).max(5),
   capability: z.coerce.number().int().min(1).max(5),
+  challenge: z.coerce.number().int().min(1).max(5),
+  attention: z.coerce.number().int().min(1).max(5),
+  questioning: z.coerce.number().int().min(1).max(5),
+  vexKnowledge: z.coerce.number().int().min(1).max(5),
+  problemSolving: z.coerce.number().int().min(1).max(5),
   fitNotes: z.string().trim().min(1).max(2000),
   recommend: z.boolean(),
 });
@@ -40,10 +81,26 @@ function clean<T extends Record<string, unknown>>(obj: T) {
   return out;
 }
 
+/** "2026-05-09" → Date at local midday (avoids timezone-rolling to prev day). */
+function parseLocalDate(s: string): Date {
+  // Accept either yyyy-MM-dd (date-only) or full ISO; both end up at local noon.
+  const d = new Date(s);
+  if (!Number.isNaN(d.getTime()) && /T/.test(s)) return d;
+  const [y, m, day] = s.split("-").map((n) => Number(n));
+  return new Date(y, (m ?? 1) - 1, day ?? 1, 12, 0, 0, 0);
+}
+
+function withDates(data: z.infer<typeof trialSchema>) {
+  const cleaned = clean(data) as Record<string, unknown>;
+  cleaned.scheduledAt = parseLocalDate(data.scheduledAt);
+  cleaned.birthdate = data.birthdate ? parseLocalDate(data.birthdate) : null;
+  return cleaned;
+}
+
 export async function createTrial(input: unknown) {
   const data = trialSchema.parse(input);
   const t = await prisma.trialStudent.create({
-    data: { ...clean(data), scheduledAt: new Date(data.scheduledAt) } as never,
+    data: withDates(data) as never,
   });
   revalidatePath("/trial-students");
   revalidatePath("/");
@@ -54,7 +111,7 @@ export async function updateTrial(id: string, input: unknown) {
   const data = trialSchema.parse(input);
   await prisma.trialStudent.update({
     where: { id },
-    data: { ...clean(data), scheduledAt: new Date(data.scheduledAt) } as never,
+    data: withDates(data) as never,
   });
   revalidatePath("/trial-students");
   revalidatePath(`/trial-students/${id}`);
@@ -114,6 +171,8 @@ export async function convertTrialToStudent(input: unknown) {
       parentName: trial.parentName,
       parentEmail: trial.parentEmail,
       parentPhone: trial.parentPhone,
+      parentWechat: trial.parentWechat,
+      commPref: trial.commPref,
       grade: trial.grade,
       track: data.track,
       notes: trial.notes,
@@ -151,28 +210,3 @@ export async function submitAssessment(trialStudentId: string, input: unknown) {
   revalidatePath("/trial-students");
 }
 
-/**
- * Stamp the parent acceptance email as sent. The actual sending is manual
- * (Ingrid pastes from the preview into her own email client) — this just
- * tracks "she did it" so the trial card shows the right status.
- */
-export async function markEmailSent(trialStudentId: string) {
-  const coach = await getCurrentCoach();
-  await prisma.trialAssessment.update({
-    where: { trialStudentId },
-    data: { emailSentAt: new Date(), emailSentById: coach.id },
-  });
-  revalidatePath(`/trial-students/${trialStudentId}`);
-  revalidatePath(`/trial-students/${trialStudentId}/email`);
-  revalidatePath("/trial-students");
-}
-
-export async function unmarkEmailSent(trialStudentId: string) {
-  await prisma.trialAssessment.update({
-    where: { trialStudentId },
-    data: { emailSentAt: null, emailSentById: null },
-  });
-  revalidatePath(`/trial-students/${trialStudentId}`);
-  revalidatePath(`/trial-students/${trialStudentId}/email`);
-  revalidatePath("/trial-students");
-}
