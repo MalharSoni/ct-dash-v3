@@ -13,15 +13,14 @@ interface Props {
 }
 
 export function EmailPreview({ subject, body, html, to }: Props) {
-  const [copied, setCopied] = useState<"rich" | "plain" | "subject" | null>(
-    null
-  );
+  const [copied, setCopied] = useState<"rich" | "subject" | null>(null);
 
   /**
-   * Rich copy: writes both text/html and text/plain to the clipboard so
-   * Outlook / Gmail / Apple Mail paste with formatting (bold, callouts,
-   * cost table, CTA button) intact, while a plain-text editor still gets
-   * readable output.
+   * Single copy action: writes both text/html (formatted) and text/plain
+   * (fallback) to the clipboard. Outlook / Gmail / Apple Mail paste the
+   * formatted version; a plain-text target (terminal, Slack) automatically
+   * picks up the text fallback. There's no separate "plain text" button
+   * because this one already covers both.
    */
   async function copyRich() {
     try {
@@ -37,17 +36,6 @@ export function EmailPreview({ subject, body, html, to }: Props) {
       }
       setCopied("rich");
       toast.success("Email copied — paste into Outlook compose");
-      setTimeout(() => setCopied(null), 2200);
-    } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Copy failed");
-    }
-  }
-
-  async function copyPlain() {
-    try {
-      await navigator.clipboard.writeText(body);
-      setCopied("plain");
-      toast.success("Plain text copied");
       setTimeout(() => setCopied(null), 2200);
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Copy failed");
@@ -70,29 +58,20 @@ export function EmailPreview({ subject, body, html, to }: Props) {
       {/* Primary action: one-click copy of the full formatted email body. */}
       <div className="bg-card border border-border rounded-[var(--radius)] shadow-card p-4 flex flex-wrap items-center gap-3">
         <Button size="lg" onClick={copyRich} className="font-semibold">
-          {copied === "rich" ? (
-            <Check size={16} />
-          ) : (
-            <Mail size={16} />
-          )}
+          {copied === "rich" ? <Check size={16} /> : <Mail size={16} />}
           {copied === "rich" ? "Copied — paste into Outlook" : "Copy email for Outlook"}
         </Button>
-        <div className="text-[12.5px] text-mute-1 leading-snug">
-          Open a new Outlook message, paste the subject above into the subject line,
-          <br className="hidden sm:inline" />
-          then paste the email into the body. Formatting will carry over.
-        </div>
-      </div>
-
-      <div className="flex flex-wrap gap-2">
         <Button size="sm" variant="outline" onClick={copySubject}>
           {copied === "subject" ? <Check size={14} /> : <Copy size={14} />}
           {copied === "subject" ? "Subject copied" : "Copy subject"}
         </Button>
-        <Button size="sm" variant="ghost" onClick={copyPlain}>
-          {copied === "plain" ? <Check size={14} /> : <Copy size={14} />}
-          {copied === "plain" ? "Copied" : "Copy plain text"}
-        </Button>
+        <div className="text-[12.5px] text-mute-1 leading-snug w-full">
+          1. <strong className="text-foreground">Copy subject</strong> &rarr; paste into Outlook&rsquo;s subject line.
+          {" "}
+          2. <strong className="text-foreground">Copy email for Outlook</strong> &rarr; paste into the message body.
+          {" "}
+          Formatting carries over.
+        </div>
       </div>
 
       {to && <Field label="To" value={to} />}
