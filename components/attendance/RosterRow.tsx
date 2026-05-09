@@ -219,12 +219,12 @@ export function RosterRow({
                   side="right"
                   align="start"
                   sideOffset={8}
-                  className="max-w-sm bg-card text-foreground border border-border shadow-card-hover px-3 py-2 text-[12.5px] whitespace-pre-wrap leading-relaxed"
+                  className="flex flex-col items-start gap-1 max-w-sm bg-card text-foreground border border-border shadow-card-hover px-3 py-2 text-[12.5px] leading-relaxed"
                 >
-                  <span className="block text-[10px] uppercase tracking-[0.06em] font-bold text-mute-1 mb-1">
+                  <span className="text-[10px] uppercase tracking-[0.06em] font-bold text-mute-1">
                     Session note
                   </span>
-                  {notes}
+                  <span className="whitespace-pre-wrap">{notes}</span>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
