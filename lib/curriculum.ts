@@ -18,9 +18,9 @@ export const PHASE_META: Record<
   },
   COMPETITION: {
     label: "Competition",
-    ink: "#BE123C", // red — scrim, event, provincials
-    bg: "#FEF2F2",
-    border: "#FECACA",
+    ink: "#A16207", // gold yellow — scrim prep, scrim, event, provincials
+    bg: "#FFFBDC",
+    border: "#F5D000",
   },
 };
 
