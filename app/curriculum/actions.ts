@@ -409,3 +409,43 @@ export async function renameTimeslot(input: unknown) {
   });
   revalidate();
 }
+
+const monthThemeSchema = z.object({
+  yearMonth: z.string().regex(/^\d{4}-\d{2}$/, "Expected YYYY-MM"),
+  cohort: z.enum(COHORTS),
+  title: z.string().trim().min(1, "Title required").max(80),
+  subtitle: z.string().trim().max(160).optional().nullable(),
+});
+
+export async function upsertMonthTheme(input: unknown) {
+  const data = monthThemeSchema.parse(input);
+  await prisma.curriculumMonthTheme.upsert({
+    where: {
+      yearMonth_cohort: { yearMonth: data.yearMonth, cohort: data.cohort },
+    },
+    create: {
+      yearMonth: data.yearMonth,
+      cohort: data.cohort,
+      title: data.title,
+      subtitle: data.subtitle || null,
+    },
+    update: {
+      title: data.title,
+      subtitle: data.subtitle || null,
+    },
+  });
+  revalidate();
+}
+
+export async function removeMonthTheme(input: unknown) {
+  const data = z
+    .object({
+      yearMonth: z.string().regex(/^\d{4}-\d{2}$/),
+      cohort: z.enum(COHORTS),
+    })
+    .parse(input);
+  await prisma.curriculumMonthTheme.deleteMany({
+    where: { yearMonth: data.yearMonth, cohort: data.cohort },
+  });
+  revalidate();
+}

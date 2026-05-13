@@ -16,25 +16,42 @@ import {
 import { cn } from "@/lib/utils";
 import { PHASE_META, DEFAULT_COHORT } from "@/lib/curriculum";
 import { EntryDialog } from "./EntryDialog";
+import { MonthThemeDialog } from "./MonthThemeDialog";
 import { WeekRowActions } from "./WeekRowActions";
 import { TimeslotEditDialog } from "./TimeslotEditDialog";
 import { removeEntry, moveEntry } from "@/app/curriculum/actions";
-import type { TimeslotDTO, WeekDTO, EntryDTO } from "./types";
+import type { TimeslotDTO, WeekDTO, EntryDTO, MonthThemeDTO } from "./types";
 import type { CurriculumCohort } from "@prisma/client";
 
 interface Props {
   weeks: WeekDTO[];
   timeslots: TimeslotDTO[];
+  monthThemes?: MonthThemeDTO[];
   editable?: boolean;
   activeCohort?: CurriculumCohort;
+}
+
+function yearMonthOf(iso: string) {
+  return iso.slice(0, 7); // "YYYY-MM"
 }
 
 export function CurriculumMatrix({
   weeks,
   timeslots,
+  monthThemes = [],
   editable = false,
   activeCohort = DEFAULT_COHORT,
 }: Props) {
+  const [activeMonth, setActiveMonth] = useState<
+    | { yearMonth: string; existing: MonthThemeDTO | null }
+    | null
+  >(null);
+  // Look up the theme for (month, activeCohort)
+  const themesByKey = new Map(
+    monthThemes
+      .filter((m) => m.cohort === activeCohort)
+      .map((m) => [m.yearMonth, m])
+  );
   const [activeCell, setActiveCell] = useState<
     | { week: WeekDTO; timeslot: TimeslotDTO; entry: EntryDTO | null }
     | null
@@ -141,8 +158,60 @@ export function CurriculumMatrix({
             const isLast = wIdx === weeks.length - 1;
             const rowBorder = isLast ? "" : "border-b border-border";
 
+            // Detect a month boundary — render a banner row above the first
+            // week of each month (always, even if no theme is set, so the
+            // coach can click to add one).
+            const ymCurrent = yearMonthOf(week.saturday);
+            const prev = wIdx > 0 ? weeks[wIdx - 1] : null;
+            const isFirstOfMonth = !prev || yearMonthOf(prev.saturday) !== ymCurrent;
+            const theme = themesByKey.get(ymCurrent) ?? null;
+
             return (
               <RowFragment key={week.id}>
+                {/* Month banner — spans the entire grid row */}
+                {isFirstOfMonth && (
+                  <button
+                    type="button"
+                    onClick={
+                      editable
+                        ? () =>
+                            setActiveMonth({
+                              yearMonth: ymCurrent,
+                              existing: theme,
+                            })
+                        : undefined
+                    }
+                    disabled={!editable}
+                    style={{ gridColumn: `1 / -1` }}
+                    className={cn(
+                      "text-left px-3 py-2 border-b border-border bg-mute-4/70 flex flex-wrap items-baseline gap-x-3 gap-y-0.5",
+                      editable && "hover:bg-mute-3/60 transition-colors cursor-pointer"
+                    )}
+                  >
+                    <span className="text-[11px] font-bold uppercase tracking-[0.1em] text-mute-1">
+                      {format(sat, "MMMM yyyy")}
+                    </span>
+                    {theme ? (
+                      <>
+                        <span className="text-[13px] font-bold text-foreground">
+                          {theme.title}
+                        </span>
+                        {theme.subtitle && (
+                          <span className="text-[12px] text-mute-1">
+                            · {theme.subtitle}
+                          </span>
+                        )}
+                      </>
+                    ) : (
+                      editable && (
+                        <span className="text-[12px] text-mute-2 italic">
+                          Click to add a theme for this month
+                        </span>
+                      )
+                    )}
+                  </button>
+                )}
+
                 {/* Date cell */}
                 <div
                   className={cn(
@@ -236,6 +305,16 @@ export function CurriculumMatrix({
           open={!!activeTimeslot}
           onOpenChange={(v) => !v && setActiveTimeslot(null)}
           timeslot={activeTimeslot}
+        />
+      )}
+
+      {editable && activeMonth && (
+        <MonthThemeDialog
+          open={!!activeMonth}
+          onOpenChange={(v) => !v && setActiveMonth(null)}
+          yearMonth={activeMonth.yearMonth}
+          cohort={activeCohort}
+          existing={activeMonth.existing}
         />
       )}
     </>

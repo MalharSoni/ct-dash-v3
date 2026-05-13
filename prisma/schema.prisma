@@ -578,6 +578,23 @@ model CurriculumEntry {
   @@unique([weekId, timeslotId, cohort])
 }
 
+// Per-(month, cohort) banner row rendered above the weeks of that month
+// in the matrix. Lets us label themes like "Pre-Season · Building
+// Fundamentals" for the V5RC tab without baking them into every cell.
+model CurriculumMonthTheme {
+  id        String           @id @default(cuid())
+  yearMonth String           // "YYYY-MM" — the calendar month this row spans
+  cohort    CurriculumCohort
+  title     String           // e.g. "Pre-Season"
+  subtitle  String?          // e.g. "Building Fundamentals"
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([yearMonth, cohort])
+  @@index([yearMonth])
+}
+
 // ─────────────────────────── ORG SETTINGS ───────────────────────────
 // Singleton row that stores branding/copy used in shared surfaces
 // (public curriculum page header, report card footer, etc.)

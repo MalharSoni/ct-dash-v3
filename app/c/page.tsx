@@ -4,7 +4,7 @@ import { CohortTabs } from "@/components/curriculum/CohortTabs";
 import { prisma } from "@/lib/prisma";
 import { PHASES, PHASE_META, parseCohort } from "@/lib/curriculum";
 import { getOrgSettings } from "@/app/settings/coach-actions";
-import type { WeekDTO, TimeslotDTO } from "@/components/curriculum/types";
+import type { WeekDTO, TimeslotDTO, MonthThemeDTO } from "@/components/curriculum/types";
 
 export const dynamic = "force-dynamic";
 
@@ -15,8 +15,12 @@ export async function generateMetadata() {
   };
 }
 
-async function loadData(): Promise<{ weeks: WeekDTO[]; timeslots: TimeslotDTO[] }> {
-  const [timeslots, weeks] = await Promise.all([
+async function loadData(): Promise<{
+  weeks: WeekDTO[];
+  timeslots: TimeslotDTO[];
+  monthThemes: MonthThemeDTO[];
+}> {
+  const [timeslots, weeks, monthThemes] = await Promise.all([
     prisma.curriculumTimeslot.findMany({
       where: { active: true },
       orderBy: { order: "asc" },
@@ -24,6 +28,9 @@ async function loadData(): Promise<{ weeks: WeekDTO[]; timeslots: TimeslotDTO[] 
     prisma.curriculumWeek.findMany({
       orderBy: { saturday: "asc" },
       include: { entries: true },
+    }),
+    prisma.curriculumMonthTheme.findMany({
+      orderBy: [{ yearMonth: "asc" }, { cohort: "asc" }],
     }),
   ]);
 
@@ -52,6 +59,13 @@ async function loadData(): Promise<{ weeks: WeekDTO[]; timeslots: TimeslotDTO[] 
         cohort: e.cohort,
       })),
     })),
+    monthThemes: monthThemes.map((m) => ({
+      id: m.id,
+      yearMonth: m.yearMonth,
+      cohort: m.cohort,
+      title: m.title,
+      subtitle: m.subtitle,
+    })),
   };
 }
 
@@ -60,7 +74,7 @@ export default async function PublicCurriculumPage({
 }: {
   searchParams: Promise<{ cohort?: string }>;
 }) {
-  const [{ weeks, timeslots }, org, sp] = await Promise.all([
+  const [{ weeks, timeslots, monthThemes }, org, sp] = await Promise.all([
     loadData(),
     getOrgSettings(),
     searchParams,
@@ -129,6 +143,7 @@ export default async function PublicCurriculumPage({
         <CurriculumMatrix
           weeks={weeks}
           timeslots={timeslots}
+          monthThemes={monthThemes}
           activeCohort={activeCohort}
         />
 
