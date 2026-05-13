@@ -22,9 +22,20 @@ export const PHASE_META: Record<
     bg: "#FFFBDC",
     border: "#F5D000",
   },
+  WORK_PERIOD: {
+    label: "Work Period",
+    ink: "#047857", // emerald — self-directed work / open lab time
+    bg: "#ECFDF5",
+    border: "#A7F3D0",
+  },
 };
 
-export const PHASES: CurriculumPhase[] = ["HANDS_ON", "GUIDED_LESSON", "COMPETITION"];
+export const PHASES: CurriculumPhase[] = [
+  "HANDS_ON",
+  "GUIDED_LESSON",
+  "COMPETITION",
+  "WORK_PERIOD",
+];
 
 export const COHORTS: CurriculumCohort[] = ["FOUNDATION", "V5RC", "PROJECTS"];
 

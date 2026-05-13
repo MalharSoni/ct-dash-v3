@@ -121,8 +121,8 @@ export function ImportDialog() {
               </li>
               <li>
                 <strong>phase</strong>: HANDS_ON, GUIDED_LESSON,
-                COMPETITION — or <strong>BREAK</strong> for a whole-row
-                break.
+                COMPETITION, WORK_PERIOD — or <strong>BREAK</strong> for
+                a whole-row break.
               </li>
               <li>
                 <strong>description</strong>: optional notes shown to parents.

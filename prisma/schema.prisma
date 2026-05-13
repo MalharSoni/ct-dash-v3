@@ -549,6 +549,7 @@ enum CurriculumPhase {
   HANDS_ON
   GUIDED_LESSON
   COMPETITION
+  WORK_PERIOD
 }
 
 // Student cohort. Multiple cohorts can share one (week, timeslot) cell;
