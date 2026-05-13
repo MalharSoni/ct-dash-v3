@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { format } from "date-fns";
-import { Plus, Pencil, Trash2, Loader2, GripVertical } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2, GripVertical, Copy, ClipboardPaste } from "lucide-react";
 import { toast } from "sonner";
 import {
   DndContext,
@@ -19,7 +19,7 @@ import { EntryDialog } from "./EntryDialog";
 import { MonthThemeDialog } from "./MonthThemeDialog";
 import { WeekRowActions } from "./WeekRowActions";
 import { TimeslotEditDialog } from "./TimeslotEditDialog";
-import { removeEntry, moveEntry } from "@/app/curriculum/actions";
+import { removeEntry, moveEntry, upsertEntry } from "@/app/curriculum/actions";
 import type { TimeslotDTO, WeekDTO, EntryDTO, MonthThemeDTO } from "./types";
 import type { CurriculumCohort } from "@prisma/client";
 
@@ -57,6 +57,30 @@ export function CurriculumMatrix({
     | null
   >(null);
   const [activeTimeslot, setActiveTimeslot] = useState<TimeslotDTO | null>(null);
+
+  // In-memory clipboard for copy/paste of cell entries. Stays alive until the
+  // page navigates away. Pastes into the target's own (week, timeslot) and
+  // keeps the original entry where it is.
+  const [clipboard, setClipboard] = useState<EntryDTO | null>(null);
+
+  function handleCopyEntry(entry: EntryDTO) {
+    setClipboard(entry);
+    toast.success("Copied — click an empty cell to paste");
+  }
+
+  function handlePasteEntry(targetWeek: WeekDTO, targetTimeslot: TimeslotDTO) {
+    if (!clipboard) return;
+    upsertEntry({
+      weekId: targetWeek.id,
+      timeslotId: targetTimeslot.id,
+      title: clipboard.title,
+      description: clipboard.description,
+      phase: clipboard.phase,
+      cohort: activeCohort,
+    })
+      .then(() => toast.success("Pasted"))
+      .catch((err) => toast.error(err instanceof Error ? err.message : "Failed"));
+  }
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
   );
@@ -267,6 +291,13 @@ export function CurriculumMatrix({
                                 setActiveCell({ week, timeslot: t, entry })
                             : undefined
                         }
+                        clipboard={clipboard}
+                        onCopy={handleCopyEntry}
+                        onPaste={
+                          clipboard && !entry
+                            ? () => handlePasteEntry(week, t)
+                            : undefined
+                        }
                       />
                     );
                   })
@@ -280,7 +311,7 @@ export function CurriculumMatrix({
                       rowBorder
                     )}
                   >
-                    <WeekRowActions week={week} />
+                    <WeekRowActions week={week} activeCohort={activeCohort} />
                   </div>
                 )}
               </RowFragment>
@@ -342,6 +373,9 @@ function Cell({
   editable,
   rowBorder,
   onClick,
+  clipboard,
+  onCopy,
+  onPaste,
 }: {
   week: WeekDTO;
   timeslot: TimeslotDTO;
@@ -349,12 +383,23 @@ function Cell({
   editable: boolean;
   rowBorder: string;
   onClick?: () => void;
+  clipboard?: EntryDTO | null;
+  onCopy?: (entry: EntryDTO) => void;
+  onPaste?: () => void;
 }) {
   const dropId = `week:${week.id}|ts:${timeslot.id}`;
 
   if (!entry) {
     if (editable) {
-      return <EmptyDroppableCell id={dropId} rowBorder={rowBorder} onClick={onClick} />;
+      return (
+        <EmptyDroppableCell
+          id={dropId}
+          rowBorder={rowBorder}
+          onClick={onClick}
+          canPaste={!!clipboard && !!onPaste}
+          onPaste={onPaste}
+        />
+      );
     }
     return (
       <div className={cn("border-l border-border", rowBorder)} />
@@ -376,6 +421,7 @@ function Cell({
         meta={meta}
         entry={entry}
         onClick={onClick}
+        onCopy={onCopy ? () => onCopy(entry) : undefined}
       />
     );
   }
@@ -412,31 +458,54 @@ function EmptyDroppableCell({
   id,
   rowBorder,
   onClick,
+  canPaste,
+  onPaste,
 }: {
   id: string;
   rowBorder: string;
   onClick?: () => void;
+  canPaste?: boolean;
+  onPaste?: () => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id });
   return (
-    <button
+    <div
       ref={setNodeRef}
-      type="button"
-      onClick={onClick}
       className={cn(
-        "border-l border-border px-3 py-3 text-left text-[12px] text-mute-2 hover:bg-mute-4 hover:text-foreground transition-colors group flex items-center gap-1.5 min-h-16",
+        "relative border-l border-border min-h-16 group/cell",
         isOver && "bg-brand-bg ring-2 ring-brand-dim",
         rowBorder
       )}
     >
-      <Plus
-        size={12}
-        className="opacity-0 group-hover:opacity-100 transition-opacity"
-      />
-      <span className="opacity-0 group-hover:opacity-100 transition-opacity">
-        Add lesson
-      </span>
-    </button>
+      <button
+        type="button"
+        onClick={onClick}
+        className={cn(
+          "absolute inset-0 px-3 py-3 text-left text-[12px] text-mute-2 hover:bg-mute-4 hover:text-foreground transition-colors group flex items-center gap-1.5"
+        )}
+      >
+        <Plus
+          size={12}
+          className="opacity-0 group-hover:opacity-100 transition-opacity"
+        />
+        <span className="opacity-0 group-hover:opacity-100 transition-opacity">
+          Add lesson
+        </span>
+      </button>
+      {canPaste && onPaste && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onPaste();
+          }}
+          aria-label="Paste copied lesson here"
+          className="absolute top-1.5 right-1.5 z-10 inline-flex items-center gap-1 px-1.5 h-6 rounded-md bg-brand text-ink border border-brand-dim text-[10.5px] font-bold uppercase tracking-[0.04em] opacity-0 group-hover/cell:opacity-100 transition-opacity hover:brightness-95"
+        >
+          <ClipboardPaste size={11} /> Paste
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -447,6 +516,7 @@ function DraggableCell({
   meta,
   entry,
   onClick,
+  onCopy,
 }: {
   id: string;
   entryId: string;
@@ -454,6 +524,7 @@ function DraggableCell({
   meta: { ink: string; bg: string; border: string; label: string };
   entry: EntryDTO;
   onClick?: () => void;
+  onCopy?: () => void;
 }) {
   const drag = useDraggable({ id: entryId });
   const drop = useDroppable({ id });
@@ -519,6 +590,19 @@ function DraggableCell({
         <div className="text-[11.5px] text-mute-1 mt-1 line-clamp-2 relative pointer-events-none">
           {entry.description}
         </div>
+      )}
+      {onCopy && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onCopy();
+          }}
+          aria-label="Copy lesson"
+          className="absolute top-1.5 right-9 z-10 size-6 rounded-md bg-card/95 border border-border text-mute-1 hover:bg-mute-4 hover:text-foreground grid place-items-center opacity-0 group-hover/cell:opacity-100 transition-opacity"
+        >
+          <Copy size={11} />
+        </button>
       )}
       <CellQuickDelete entryId={entryId} />
     </div>

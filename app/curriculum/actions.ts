@@ -73,7 +73,13 @@ export async function updateWeek(input: unknown) {
 
 export async function duplicateWeek(input: unknown) {
   const data = z
-    .object({ sourceWeekId: z.string(), targetSaturday: z.string() })
+    .object({
+      sourceWeekId: z.string(),
+      targetSaturday: z.string(),
+      // Optional cohort filter — when set, only copy entries for that cohort
+      // (leaves other cohorts' entries on the target week intact).
+      cohort: z.enum(COHORTS).optional(),
+    })
     .parse(input);
   const source = await prisma.curriculumWeek.findUnique({
     where: { id: data.sourceWeekId },
@@ -90,8 +96,12 @@ export async function duplicateWeek(input: unknown) {
     update: {},
   });
 
+  const entriesToCopy = data.cohort
+    ? source.entries.filter((e) => e.cohort === data.cohort)
+    : source.entries;
+
   // Copy each entry to the target week (overwriting existing on conflict).
-  for (const e of source.entries) {
+  for (const e of entriesToCopy) {
     await prisma.curriculumEntry.upsert({
       where: {
         weekId_timeslotId_cohort: {
