@@ -24,9 +24,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { upsertEntry, removeEntry } from "@/app/curriculum/actions";
-import { PHASES, PHASE_META } from "@/lib/curriculum";
+import { PHASES, PHASE_META, COHORTS, COHORT_META, DEFAULT_COHORT } from "@/lib/curriculum";
 import type { EntryDTO, TimeslotDTO, WeekDTO } from "./types";
-import type { CurriculumPhase } from "@prisma/client";
+import type { CurriculumPhase, CurriculumCohort } from "@prisma/client";
 
 interface Props {
   open: boolean;
@@ -34,12 +34,21 @@ interface Props {
   week: WeekDTO;
   timeslot: TimeslotDTO;
   entry: EntryDTO | null;
+  defaultCohort?: CurriculumCohort;
 }
 
-export function EntryDialog({ open, onOpenChange, week, timeslot, entry }: Props) {
+export function EntryDialog({
+  open,
+  onOpenChange,
+  week,
+  timeslot,
+  entry,
+  defaultCohort = DEFAULT_COHORT,
+}: Props) {
   const [title, setTitle] = useState(entry?.title ?? "");
   const [description, setDescription] = useState(entry?.description ?? "");
   const [phase, setPhase] = useState<CurriculumPhase>(entry?.phase ?? "GENERAL");
+  const [cohort, setCohort] = useState<CurriculumCohort>(entry?.cohort ?? defaultCohort);
   const [isPending, startTransition] = useTransition();
 
   // Reset state when entry/timeslot changes
@@ -47,6 +56,7 @@ export function EntryDialog({ open, onOpenChange, week, timeslot, entry }: Props
     setTitle(entry?.title ?? "");
     setDescription(entry?.description ?? "");
     setPhase(entry?.phase ?? "GENERAL");
+    setCohort(entry?.cohort ?? defaultCohort);
   }
 
   function handleOpenChange(v: boolean) {
@@ -67,6 +77,7 @@ export function EntryDialog({ open, onOpenChange, week, timeslot, entry }: Props
           title: title.trim(),
           description: description.trim() || null,
           phase,
+          cohort,
         });
         toast.success(entry ? "Updated" : "Added");
         onOpenChange(false);
@@ -119,26 +130,43 @@ export function EntryDialog({ open, onOpenChange, week, timeslot, entry }: Props
             />
           </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="phase">Phase</Label>
-            <Select value={phase} onValueChange={(v) => setPhase(v as CurriculumPhase)}>
-              <SelectTrigger id="phase">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {PHASES.map((p) => (
-                  <SelectItem key={p} value={p}>
-                    <span className="inline-flex items-center gap-2">
-                      <span
-                        className="size-2.5 rounded-sm"
-                        style={{ background: PHASE_META[p].ink }}
-                      />
-                      {PHASE_META[p].label}
-                    </span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="cohort">Cohort</Label>
+              <Select value={cohort} onValueChange={(v) => setCohort(v as CurriculumCohort)}>
+                <SelectTrigger id="cohort">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {COHORTS.map((c) => (
+                    <SelectItem key={c} value={c}>
+                      {COHORT_META[c].label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="phase">Phase</Label>
+              <Select value={phase} onValueChange={(v) => setPhase(v as CurriculumPhase)}>
+                <SelectTrigger id="phase">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PHASES.map((p) => (
+                    <SelectItem key={p} value={p}>
+                      <span className="inline-flex items-center gap-2">
+                        <span
+                          className="size-2.5 rounded-sm"
+                          style={{ background: PHASE_META[p].ink }}
+                        />
+                        {PHASE_META[p].label}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div className="space-y-1.5">
