@@ -5,13 +5,6 @@ import { cn } from "@/lib/utils";
 import { COHORTS, COHORT_META, DEFAULT_COHORT } from "@/lib/curriculum";
 import type { CurriculumCohort } from "@prisma/client";
 
-export function parseCohort(raw: string | null | undefined): CurriculumCohort {
-  if (raw && (COHORTS as readonly string[]).includes(raw.toUpperCase())) {
-    return raw.toUpperCase() as CurriculumCohort;
-  }
-  return DEFAULT_COHORT;
-}
-
 interface Props {
   active: CurriculumCohort;
 }
