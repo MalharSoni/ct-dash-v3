@@ -543,12 +543,11 @@ model CurriculumWeek {
   @@index([saturday])
 }
 
+// Teaching style for a curriculum entry. Tags HOW a lesson is delivered
+// (not what topic / who it's for — that's the cohort). Easy to extend.
 enum CurriculumPhase {
-  FOUNDATION
-  VRC
-  PROJECT
-  COMPETITION
-  GENERAL
+  HANDS_ON
+  GUIDED_LESSON
 }
 
 // Student cohort. Multiple cohorts can share one (week, timeslot) cell;
@@ -569,7 +568,7 @@ model CurriculumEntry {
 
   title       String
   description String?
-  phase       CurriculumPhase @default(GENERAL)
+  phase       CurriculumPhase @default(HANDS_ON)
   cohort      CurriculumCohort @default(V5RC)
 
   createdAt   DateTime @default(now())

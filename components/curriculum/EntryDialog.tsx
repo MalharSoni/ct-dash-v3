@@ -47,7 +47,7 @@ export function EntryDialog({
 }: Props) {
   const [title, setTitle] = useState(entry?.title ?? "");
   const [description, setDescription] = useState(entry?.description ?? "");
-  const [phase, setPhase] = useState<CurriculumPhase>(entry?.phase ?? "GENERAL");
+  const [phase, setPhase] = useState<CurriculumPhase>(entry?.phase ?? "HANDS_ON");
   const [cohort, setCohort] = useState<CurriculumCohort>(entry?.cohort ?? defaultCohort);
   const [isPending, startTransition] = useTransition();
 
@@ -55,7 +55,7 @@ export function EntryDialog({
   function reset() {
     setTitle(entry?.title ?? "");
     setDescription(entry?.description ?? "");
-    setPhase(entry?.phase ?? "GENERAL");
+    setPhase(entry?.phase ?? "HANDS_ON");
     setCohort(entry?.cohort ?? defaultCohort);
   }
 

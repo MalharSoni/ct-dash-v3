@@ -84,7 +84,7 @@ export default async function CurriculumPage({
             <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-mute-1">
               Phases
             </span>
-            {PHASES.filter((p) => p !== "GENERAL").map((p) => {
+            {PHASES.map((p) => {
               const m = PHASE_META[p];
               return (
                 <div key={p} className="flex items-center gap-1.5 text-[12px]">

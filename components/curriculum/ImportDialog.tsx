@@ -120,8 +120,8 @@ export function ImportDialog() {
                 (case-insensitive). Leave blank for break rows.
               </li>
               <li>
-                <strong>phase</strong>: FOUNDATION, VRC, PROJECT, COMPETITION,
-                GENERAL — or <strong>BREAK</strong> for a whole-row break.
+                <strong>phase</strong>: HANDS_ON, GUIDED_LESSON — or{" "}
+                <strong>BREAK</strong> for a whole-row break.
               </li>
               <li>
                 <strong>description</strong>: optional notes shown to parents.
