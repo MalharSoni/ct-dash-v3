@@ -27,3 +27,11 @@ export type WeekDTO = {
   notes: string | null;
   entries: EntryDTO[];
 };
+
+export type MonthThemeDTO = {
+  id: string;
+  yearMonth: string;       // "YYYY-MM"
+  cohort: CurriculumCohort;
+  title: string;
+  subtitle: string | null;
+};

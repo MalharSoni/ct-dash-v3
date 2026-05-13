@@ -4,45 +4,27 @@ export const PHASE_META: Record<
   CurriculumPhase,
   { label: string; ink: string; bg: string; border: string }
 > = {
-  FOUNDATION: {
-    label: "Foundation",
-    ink: "#047857", // emerald
-    bg: "#ECFDF5",
-    border: "#A7F3D0",
-  },
-  VRC: {
-    label: "VRC",
-    ink: "#1D4ED8", // blue
-    bg: "#EFF6FF",
-    border: "#BFDBFE",
-  },
-  PROJECT: {
-    label: "Project",
-    ink: "#B45309", // amber
+  HANDS_ON: {
+    label: "Hands-On",
+    ink: "#B45309", // amber — kinetic, doing
     bg: "#FFFBEB",
     border: "#FDE68A",
   },
+  GUIDED_LESSON: {
+    label: "Guided Lesson",
+    ink: "#1D4ED8", // blue — structured teaching
+    bg: "#EFF6FF",
+    border: "#BFDBFE",
+  },
   COMPETITION: {
     label: "Competition",
-    ink: "#BE123C", // rose
+    ink: "#BE123C", // red — scrim, event, provincials
     bg: "#FEF2F2",
     border: "#FECACA",
   },
-  GENERAL: {
-    label: "General",
-    ink: "#475569", // slate
-    bg: "#F5F5F5",
-    border: "#D4D4D4",
-  },
 };
 
-export const PHASES: CurriculumPhase[] = [
-  "FOUNDATION",
-  "VRC",
-  "PROJECT",
-  "COMPETITION",
-  "GENERAL",
-];
+export const PHASES: CurriculumPhase[] = ["HANDS_ON", "GUIDED_LESSON", "COMPETITION"];
 
 export const COHORTS: CurriculumCohort[] = ["FOUNDATION", "V5RC", "PROJECTS"];
 
