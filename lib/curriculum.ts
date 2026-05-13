@@ -53,3 +53,10 @@ export const COHORT_META: Record<CurriculumCohort, { label: string; shortLabel: 
 };
 
 export const DEFAULT_COHORT: CurriculumCohort = "V5RC";
+
+export function parseCohort(raw: string | null | undefined): CurriculumCohort {
+  if (raw && (COHORTS as readonly string[]).includes(raw.toUpperCase())) {
+    return raw.toUpperCase() as CurriculumCohort;
+  }
+  return DEFAULT_COHORT;
+}

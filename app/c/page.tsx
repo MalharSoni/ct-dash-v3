@@ -1,8 +1,8 @@
 import Image from "next/image";
 import { CurriculumMatrix } from "@/components/curriculum/CurriculumMatrix";
-import { CohortTabs, parseCohort } from "@/components/curriculum/CohortTabs";
+import { CohortTabs } from "@/components/curriculum/CohortTabs";
 import { prisma } from "@/lib/prisma";
-import { PHASES, PHASE_META } from "@/lib/curriculum";
+import { PHASES, PHASE_META, parseCohort } from "@/lib/curriculum";
 import { getOrgSettings } from "@/app/settings/coach-actions";
 import type { WeekDTO, TimeslotDTO } from "@/components/curriculum/types";
 
