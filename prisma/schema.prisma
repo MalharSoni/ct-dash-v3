@@ -551,6 +551,15 @@ enum CurriculumPhase {
   GENERAL
 }
 
+// Student cohort. Multiple cohorts can share one (week, timeslot) cell;
+// the public view tabs between them. PROJECTS is a rolling label whose
+// title varies per session.
+enum CurriculumCohort {
+  FOUNDATION
+  V5RC
+  PROJECTS
+}
+
 model CurriculumEntry {
   id          String          @id @default(cuid())
   weekId      String
@@ -561,11 +570,12 @@ model CurriculumEntry {
   title       String
   description String?
   phase       CurriculumPhase @default(GENERAL)
+  cohort      CurriculumCohort @default(V5RC)
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  @@unique([weekId, timeslotId])
+  @@unique([weekId, timeslotId, cohort])
 }
 
 // ─────────────────────────── ORG SETTINGS ───────────────────────────

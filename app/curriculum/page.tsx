@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { CurriculumMatrix } from "@/components/curriculum/CurriculumMatrix";
 import { AddWeekDialog } from "@/components/curriculum/AddWeekDialog";
 import { ImportDialog } from "@/components/curriculum/ImportDialog";
+import { CohortTabs, parseCohort } from "@/components/curriculum/CohortTabs";
 import { prisma } from "@/lib/prisma";
 import { PHASES, PHASE_META } from "@/lib/curriculum";
 import { ExternalLink } from "lucide-react";
@@ -45,13 +46,19 @@ async function loadData(): Promise<{ weeks: WeekDTO[]; timeslots: TimeslotDTO[] 
         title: e.title,
         description: e.description,
         phase: e.phase,
+        cohort: e.cohort,
       })),
     })),
   };
 }
 
-export default async function CurriculumPage() {
-  const { weeks, timeslots } = await loadData();
+export default async function CurriculumPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ cohort?: string }>;
+}) {
+  const [{ weeks, timeslots }, sp] = await Promise.all([loadData(), searchParams]);
+  const activeCohort = parseCohort(sp.cohort);
 
   return (
     <AppShell
@@ -69,34 +76,39 @@ export default async function CurriculumPage() {
       }
     >
       <div className="space-y-4">
-        {/* Phase legend */}
-        <div className="bg-card border border-border rounded-[var(--radius)] p-3 shadow-card flex flex-wrap items-center gap-x-4 gap-y-1.5">
-          <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-mute-1">
-            Phases
-          </span>
-          {PHASES.filter((p) => p !== "GENERAL").map((p) => {
-            const m = PHASE_META[p];
-            return (
-              <div key={p} className="flex items-center gap-1.5 text-[12px]">
-                <span
-                  className="size-2.5 rounded-sm"
-                  style={{ background: m.ink }}
-                />
-                <span className="text-foreground">{m.label}</span>
-              </div>
-            );
-          })}
+        {/* Cohort tabs */}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <CohortTabs active={activeCohort} />
+          {/* Phase legend */}
+          <div className="bg-card border border-border rounded-[var(--radius)] p-2.5 shadow-card flex flex-wrap items-center gap-x-3 gap-y-1.5">
+            <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-mute-1">
+              Phases
+            </span>
+            {PHASES.filter((p) => p !== "GENERAL").map((p) => {
+              const m = PHASE_META[p];
+              return (
+                <div key={p} className="flex items-center gap-1.5 text-[12px]">
+                  <span
+                    className="size-2.5 rounded-sm"
+                    style={{ background: m.ink }}
+                  />
+                  <span className="text-foreground">{m.label}</span>
+                </div>
+              );
+            })}
+          </div>
         </div>
 
         <CurriculumMatrix
           weeks={weeks}
           timeslots={timeslots}
           editable
+          activeCohort={activeCohort}
         />
 
         <p className="text-[12px] text-mute-1">
-          Click any cell to add or edit a lesson. Use the row menu (⋯) to mark
-          a Saturday as a break or remove it.
+          Click any cell to add or edit a lesson for the selected cohort. Use
+          the row menu (⋯) to mark a Saturday as a break.
         </p>
       </div>
     </AppShell>

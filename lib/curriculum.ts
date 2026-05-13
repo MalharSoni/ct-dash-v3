@@ -1,4 +1,4 @@
-import type { CurriculumPhase } from "@prisma/client";
+import type { CurriculumPhase, CurriculumCohort } from "@prisma/client";
 
 export const PHASE_META: Record<
   CurriculumPhase,
@@ -43,3 +43,13 @@ export const PHASES: CurriculumPhase[] = [
   "COMPETITION",
   "GENERAL",
 ];
+
+export const COHORTS: CurriculumCohort[] = ["FOUNDATION", "V5RC", "PROJECTS"];
+
+export const COHORT_META: Record<CurriculumCohort, { label: string; shortLabel: string }> = {
+  FOUNDATION: { label: "Foundation", shortLabel: "Foundation" },
+  V5RC:       { label: "V5RC Team",  shortLabel: "V5RC" },
+  PROJECTS:   { label: "Projects",   shortLabel: "Projects" },
+};
+
+export const DEFAULT_COHORT: CurriculumCohort = "V5RC";

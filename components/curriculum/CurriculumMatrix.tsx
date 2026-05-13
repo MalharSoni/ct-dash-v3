@@ -14,20 +14,27 @@ import {
   type DragEndEvent,
 } from "@dnd-kit/core";
 import { cn } from "@/lib/utils";
-import { PHASE_META } from "@/lib/curriculum";
+import { PHASE_META, DEFAULT_COHORT } from "@/lib/curriculum";
 import { EntryDialog } from "./EntryDialog";
 import { WeekRowActions } from "./WeekRowActions";
 import { TimeslotEditDialog } from "./TimeslotEditDialog";
 import { removeEntry, moveEntry } from "@/app/curriculum/actions";
 import type { TimeslotDTO, WeekDTO, EntryDTO } from "./types";
+import type { CurriculumCohort } from "@prisma/client";
 
 interface Props {
   weeks: WeekDTO[];
   timeslots: TimeslotDTO[];
   editable?: boolean;
+  activeCohort?: CurriculumCohort;
 }
 
-export function CurriculumMatrix({ weeks, timeslots, editable = false }: Props) {
+export function CurriculumMatrix({
+  weeks,
+  timeslots,
+  editable = false,
+  activeCohort = DEFAULT_COHORT,
+}: Props) {
   const [activeCell, setActiveCell] = useState<
     | { week: WeekDTO; timeslot: TimeslotDTO; entry: EntryDTO | null }
     | null
@@ -174,7 +181,9 @@ export function CurriculumMatrix({ weeks, timeslots, editable = false }: Props) 
                 ) : (
                   timeslots.map((t) => {
                     const entry =
-                      week.entries.find((e) => e.timeslotId === t.id) ?? null;
+                      week.entries.find(
+                        (e) => e.timeslotId === t.id && e.cohort === activeCohort
+                      ) ?? null;
                     return (
                       <Cell
                         key={t.id}
@@ -218,6 +227,7 @@ export function CurriculumMatrix({ weeks, timeslots, editable = false }: Props) 
           week={activeCell.week}
           timeslot={activeCell.timeslot}
           entry={activeCell.entry}
+          defaultCohort={activeCohort}
         />
       )}
 

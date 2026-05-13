@@ -12,12 +12,15 @@ const PHASES = [
   "GENERAL",
 ] as const;
 
+const COHORTS = ["FOUNDATION", "V5RC", "PROJECTS"] as const;
+
 const entrySchema = z.object({
   weekId: z.string().min(1),
   timeslotId: z.string().min(1),
   title: z.string().trim().min(1, "Title required").max(120),
   description: z.string().trim().max(500).optional().nullable(),
   phase: z.enum(PHASES),
+  cohort: z.enum(COHORTS).default("V5RC"),
 });
 
 const weekSchema = z.object({
@@ -97,9 +100,10 @@ export async function duplicateWeek(input: unknown) {
   for (const e of source.entries) {
     await prisma.curriculumEntry.upsert({
       where: {
-        weekId_timeslotId: {
+        weekId_timeslotId_cohort: {
           weekId: target.id,
           timeslotId: e.timeslotId,
+          cohort: e.cohort,
         },
       },
       create: {
@@ -108,6 +112,7 @@ export async function duplicateWeek(input: unknown) {
         title: e.title,
         description: e.description,
         phase: e.phase,
+        cohort: e.cohort,
       },
       update: {
         title: e.title,
@@ -142,9 +147,10 @@ export async function upsertEntry(input: unknown) {
   const data = entrySchema.parse(input);
   await prisma.curriculumEntry.upsert({
     where: {
-      weekId_timeslotId: {
+      weekId_timeslotId_cohort: {
         weekId: data.weekId,
         timeslotId: data.timeslotId,
+        cohort: data.cohort,
       },
     },
     create: {
@@ -153,6 +159,7 @@ export async function upsertEntry(input: unknown) {
       title: data.title,
       description: data.description || null,
       phase: data.phase,
+      cohort: data.cohort,
     },
     update: {
       title: data.title,
@@ -169,9 +176,9 @@ export async function removeEntry(entryId: string) {
 }
 
 /**
- * Move a curriculum entry to a different (week, timeslot) cell. If the
- * destination already has an entry, the destination's entry is moved to
- * the source cell — i.e. swap. This makes drag-and-drop intuitive.
+ * Move a curriculum entry to a different (week, timeslot) cell. Cohort
+ * is preserved — the same cohort's entry at the destination is swapped.
+ * Drag-and-drop only operates within a single cohort tab at a time.
  */
 export async function moveEntry(input: unknown) {
   const data = z
@@ -197,17 +204,17 @@ export async function moveEntry(input: unknown) {
 
   const dest = await prisma.curriculumEntry.findUnique({
     where: {
-      weekId_timeslotId: {
+      weekId_timeslotId_cohort: {
         weekId: data.targetWeekId,
         timeslotId: data.targetTimeslotId,
+        cohort: source.cohort,
       },
     },
   });
 
   await prisma.$transaction(async (tx) => {
     if (dest) {
-      // Swap. To avoid the unique constraint, move both to a sentinel slot
-      // by deleting+recreating in one tx.
+      // Swap within the same cohort.
       await tx.curriculumEntry.delete({ where: { id: source.id } });
       await tx.curriculumEntry.delete({ where: { id: dest.id } });
       await tx.curriculumEntry.create({
@@ -217,6 +224,7 @@ export async function moveEntry(input: unknown) {
           title: source.title,
           description: source.description,
           phase: source.phase,
+          cohort: source.cohort,
         },
       });
       await tx.curriculumEntry.create({
@@ -226,6 +234,7 @@ export async function moveEntry(input: unknown) {
           title: dest.title,
           description: dest.description,
           phase: dest.phase,
+          cohort: dest.cohort,
         },
       });
     } else {
@@ -246,11 +255,14 @@ export async function moveEntry(input: unknown) {
  * Bulk-import a curriculum from a CSV string.
  *
  * Format (header row required):
- *   saturday,timeslot,title,phase,description
+ *   saturday,timeslot,cohort,phase,title,description
+ *   (older format saturday,timeslot,title,phase,description still works;
+ *    rows default to cohort=V5RC)
  *
  * Rules:
  *   - `saturday` is YYYY-MM-DD.
  *   - `timeslot` matches an existing CurriculumTimeslot.name (case-insensitive).
+ *   - `cohort` is FOUNDATION, V5RC, or PROJECTS (defaults to V5RC if missing).
  *   - `phase` is one of FOUNDATION, VRC, PROJECT, COMPETITION, GENERAL,
  *     or BREAK to mark the whole row as a break.
  *   - For BREAK rows, leave `timeslot` empty; `description` becomes breakNote.
@@ -270,6 +282,7 @@ export async function importCurriculumCSV(csv: string) {
   const iTitle = idx("title");
   const iPhase = idx("phase");
   const iDesc = idx("description");
+  const iCohort = idx("cohort");
   if (iSat < 0 || iPhase < 0)
     throw new Error("Header must include `saturday` and `phase` columns.");
 
@@ -285,6 +298,7 @@ export async function importCurriculumCSV(csv: string) {
     "COMPETITION",
     "GENERAL",
   ]);
+  const COHORTS_VALID = new Set(["FOUNDATION", "V5RC", "PROJECTS"]);
 
   function parseRow(raw: string) {
     // Minimal CSV parser supporting quoted fields with commas.
@@ -324,6 +338,7 @@ export async function importCurriculumCSV(csv: string) {
     const tsRaw = iTs >= 0 ? cols[iTs] ?? "" : "";
     const title = iTitle >= 0 ? cols[iTitle] ?? "" : "";
     const desc = iDesc >= 0 ? cols[iDesc] ?? "" : "";
+    const cohortRaw = iCohort >= 0 ? (cols[iCohort] ?? "").toUpperCase() : "V5RC";
 
     if (!sat || !/^\d{4}-\d{2}-\d{2}$/.test(sat)) {
       errors.push(`Row ${i + 1}: invalid saturday "${sat}"`);
@@ -370,14 +385,20 @@ export async function importCurriculumCSV(csv: string) {
       continue;
     }
 
+    const cohort = (COHORTS_VALID.has(cohortRaw) ? cohortRaw : "V5RC") as
+      "FOUNDATION" | "V5RC" | "PROJECTS";
+
     await prisma.curriculumEntry.upsert({
-      where: { weekId_timeslotId: { weekId: week.id, timeslotId: tsId } },
+      where: {
+        weekId_timeslotId_cohort: { weekId: week.id, timeslotId: tsId, cohort },
+      },
       create: {
         weekId: week.id,
         timeslotId: tsId,
         title,
         description: desc || null,
         phase: phaseRaw as "FOUNDATION" | "VRC" | "PROJECT" | "COMPETITION" | "GENERAL",
+        cohort,
       },
       update: {
         title,
