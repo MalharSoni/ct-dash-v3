@@ -548,6 +548,7 @@ model CurriculumWeek {
 enum CurriculumPhase {
   HANDS_ON
   GUIDED_LESSON
+  COMPETITION
 }
 
 // Student cohort. Multiple cohorts can share one (week, timeslot) cell;

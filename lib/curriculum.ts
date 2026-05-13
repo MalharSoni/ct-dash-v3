@@ -16,9 +16,15 @@ export const PHASE_META: Record<
     bg: "#EFF6FF",
     border: "#BFDBFE",
   },
+  COMPETITION: {
+    label: "Competition",
+    ink: "#BE123C", // red — scrim, event, provincials
+    bg: "#FEF2F2",
+    border: "#FECACA",
+  },
 };
 
-export const PHASES: CurriculumPhase[] = ["HANDS_ON", "GUIDED_LESSON"];
+export const PHASES: CurriculumPhase[] = ["HANDS_ON", "GUIDED_LESSON", "COMPETITION"];
 
 export const COHORTS: CurriculumCohort[] = ["FOUNDATION", "V5RC", "PROJECTS"];
 

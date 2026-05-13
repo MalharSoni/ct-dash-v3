@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 
-const PHASES = ["HANDS_ON", "GUIDED_LESSON"] as const;
+const PHASES = ["HANDS_ON", "GUIDED_LESSON", "COMPETITION"] as const;
 
 const COHORTS = ["FOUNDATION", "V5RC", "PROJECTS"] as const;
 
@@ -257,8 +257,8 @@ export async function moveEntry(input: unknown) {
  *   - `saturday` is YYYY-MM-DD.
  *   - `timeslot` matches an existing CurriculumTimeslot.name (case-insensitive).
  *   - `cohort` is FOUNDATION, V5RC, or PROJECTS (defaults to V5RC if missing).
- *   - `phase` is one of HANDS_ON, GUIDED_LESSON, or BREAK to mark the
- *     whole row as a break.
+ *   - `phase` is one of HANDS_ON, GUIDED_LESSON, COMPETITION, or BREAK
+ *     to mark the whole row as a break.
  *   - For BREAK rows, leave `timeslot` empty; `description` becomes breakNote.
  *   - Existing weeks/entries are upserted, not duplicated.
  */
@@ -285,7 +285,7 @@ export async function importCurriculumCSV(csv: string) {
     timeslots.map((t) => [t.name.toLowerCase(), t.id])
   );
 
-  const PHASES_VALID = new Set(["HANDS_ON", "GUIDED_LESSON"]);
+  const PHASES_VALID = new Set(["HANDS_ON", "GUIDED_LESSON", "COMPETITION"]);
   const COHORTS_VALID = new Set(["FOUNDATION", "V5RC", "PROJECTS"]);
 
   function parseRow(raw: string) {
@@ -353,7 +353,7 @@ export async function importCurriculumCSV(csv: string) {
 
     if (!PHASES_VALID.has(phaseRaw)) {
       errors.push(
-        `Row ${i + 1}: invalid phase "${phaseRaw}" (allowed: HANDS_ON, GUIDED_LESSON, BREAK)`
+        `Row ${i + 1}: invalid phase "${phaseRaw}" (allowed: HANDS_ON, GUIDED_LESSON, COMPETITION, BREAK)`
       );
       continue;
     }
@@ -385,13 +385,13 @@ export async function importCurriculumCSV(csv: string) {
         timeslotId: tsId,
         title,
         description: desc || null,
-        phase: phaseRaw as "HANDS_ON" | "GUIDED_LESSON",
+        phase: phaseRaw as "HANDS_ON" | "GUIDED_LESSON" | "COMPETITION",
         cohort,
       },
       update: {
         title,
         description: desc || null,
-        phase: phaseRaw as "HANDS_ON" | "GUIDED_LESSON",
+        phase: phaseRaw as "HANDS_ON" | "GUIDED_LESSON" | "COMPETITION",
       },
     });
     entriesUpserted++;
