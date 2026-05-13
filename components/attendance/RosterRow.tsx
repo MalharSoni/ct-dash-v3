@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import {
   Check,
@@ -14,6 +15,12 @@ import { toast } from "sonner";
 import { AvatarInitials } from "@/components/ui/avatar-initials";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   setAttendance,
   setPerformance,
@@ -90,11 +97,14 @@ export function RosterRow({
     <>
     <tr className="border-b last:border-b-0 border-border hover:bg-mute-4/40 transition-colors">
       <td className="px-4 py-2 sticky left-0 bg-card z-10 group-hover:bg-mute-4/40">
-        <div className="flex items-center gap-2.5">
+        <Link
+          href={`/students/${student.id}`}
+          className="flex items-center gap-2.5 group/name"
+        >
           <AvatarInitials firstName={student.firstName} lastName={student.lastName} size={28} />
           <div className="min-w-0">
             <div className="flex items-center gap-1.5 font-semibold text-[13px]">
-              <span>{student.firstName} {student.lastName}</span>
+              <span className="group-hover/name:underline">{student.firstName} {student.lastName}</span>
               {lastStatus && lastStatus !== "PRESENT" && (
                 <span
                   title={LAST_STATUS_BADGE[lastStatus].tip}
@@ -111,7 +121,7 @@ export function RosterRow({
               {student.track === "FOUNDATION" ? "Foundation" : student.track === "PROJECTS" ? "Projects" : student.track}
             </div>
           </div>
-        </div>
+        </Link>
       </td>
       <td className="px-2 py-2">
         <div className="flex gap-1">
@@ -192,20 +202,41 @@ export function RosterRow({
               placeholder="Note…"
               className="h-7 text-[11.5px]"
             />
+          ) : notes ? (
+            <TooltipProvider delayDuration={150}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={() => setNoteOpen(true)}
+                    className="h-7 px-2 rounded-[var(--radius-sm)] border border-amber-200 bg-amber-50 text-amber-700 text-[11.5px] inline-flex items-center gap-1 transition-colors max-w-32 truncate hover:bg-amber-100"
+                  >
+                    <StickyNote size={11} className="shrink-0" />
+                    <span className="truncate">{notes}</span>
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent
+                  side="right"
+                  align="start"
+                  sideOffset={8}
+                  className="flex flex-col items-start gap-1 max-w-sm bg-card text-foreground border border-border shadow-card-hover px-3 py-2 text-[12.5px] leading-relaxed"
+                >
+                  <span className="text-[10px] uppercase tracking-[0.06em] font-bold text-mute-1">
+                    Session note
+                  </span>
+                  <span className="whitespace-pre-wrap">{notes}</span>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           ) : (
             <button
               type="button"
               onClick={() => setNoteOpen(true)}
-              className={cn(
-                "h-7 px-2 rounded-[var(--radius-sm)] border border-border text-[11.5px] inline-flex items-center gap-1 transition-colors",
-                notes
-                  ? "bg-amber-50 text-amber-700 border-amber-200 max-w-32 truncate"
-                  : "text-mute-2 hover:text-foreground"
-              )}
-              title={notes ?? "Add note"}
+              className="h-7 px-2 rounded-[var(--radius-sm)] border border-border text-[11.5px] inline-flex items-center gap-1 text-mute-2 hover:text-foreground transition-colors"
+              title="Add note"
             >
               <StickyNote size={11} className="shrink-0" />
-              <span className="truncate">{notes ?? "Add note"}</span>
+              <span>Add note</span>
             </button>
           )}
         </div>

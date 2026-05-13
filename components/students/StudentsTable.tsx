@@ -21,6 +21,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { bulkSetStudentTrack } from "@/app/students/actions";
+import { RemoveStudentButton } from "@/components/students/RemoveStudentButton";
 import { cn } from "@/lib/utils";
 import type { StudentTrack } from "@prisma/client";
 
@@ -176,6 +177,9 @@ export function StudentsTable({ students }: Props) {
               <th className="text-table-head px-4 py-2.5 w-32">Track</th>
               <th className="text-table-head px-4 py-2.5 w-32">Joined</th>
               <th className="text-table-head px-4 py-2.5 w-32">Status</th>
+              <th className="px-2 py-2.5 w-12">
+                <span className="sr-only">Actions</span>
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -248,6 +252,13 @@ export function StudentsTable({ students }: Props) {
                     ) : (
                       <span className="text-mute-2 text-[12px]">Inactive</span>
                     )}
+                  </td>
+                  <td className="px-2 py-2.5 text-right">
+                    <RemoveStudentButton
+                      studentId={s.id}
+                      studentName={`${s.firstName} ${s.lastName}`}
+                      compact
+                    />
                   </td>
                 </tr>
               );
