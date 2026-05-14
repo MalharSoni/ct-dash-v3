@@ -37,22 +37,12 @@ export const PHASES: CurriculumPhase[] = [
   "WORK_PERIOD",
 ];
 
-export const COHORTS: CurriculumCohort[] = [
-  "FOUNDATION",
-  "V5RC",
-  "V5",
-  "PROJECTS",
-];
+export const COHORTS: CurriculumCohort[] = ["FOUNDATION", "V5RC", "PROJECTS"];
 
-// activeBg / activeInk style the selected tab in CohortTabs.
-export const COHORT_META: Record<
-  CurriculumCohort,
-  { label: string; shortLabel: string; activeBg: string; activeInk: string }
-> = {
-  FOUNDATION: { label: "Foundation", shortLabel: "Foundation", activeBg: "#F5D000", activeInk: "#171717" },
-  V5RC:       { label: "V5RC Team",  shortLabel: "V5RC",       activeBg: "#F5D000", activeInk: "#171717" },
-  V5:         { label: "V5",         shortLabel: "V5",         activeBg: "#EF4444", activeInk: "#FFFFFF" },
-  PROJECTS:   { label: "Projects",   shortLabel: "Projects",   activeBg: "#F5D000", activeInk: "#171717" },
+export const COHORT_META: Record<CurriculumCohort, { label: string; shortLabel: string }> = {
+  FOUNDATION: { label: "Foundation", shortLabel: "Foundation" },
+  V5RC:       { label: "V5RC Team",  shortLabel: "V5RC" },
+  PROJECTS:   { label: "Projects",   shortLabel: "Projects" },
 };
 
 export const DEFAULT_COHORT: CurriculumCohort = "V5RC";
