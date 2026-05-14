@@ -558,6 +558,7 @@ enum CurriculumPhase {
 enum CurriculumCohort {
   FOUNDATION
   V5RC
+  V5
   PROJECTS
 }
 
