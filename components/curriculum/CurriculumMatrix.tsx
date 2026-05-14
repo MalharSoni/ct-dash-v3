@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { format } from "date-fns";
-import { Plus, Pencil, Trash2, Loader2, GripVertical, Copy, ClipboardPaste } from "lucide-react";
+import { Plus, Trash2, Loader2, GripVertical, Copy, ClipboardPaste, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import {
   DndContext,
@@ -59,13 +59,14 @@ export function CurriculumMatrix({
   const [activeTimeslot, setActiveTimeslot] = useState<TimeslotDTO | null>(null);
 
   // In-memory clipboard for copy/paste of cell entries. Stays alive until the
-  // page navigates away. Pastes into the target's own (week, timeslot) and
-  // keeps the original entry where it is.
+  // page navigates away. Pastes a fresh copy into the target cell and keeps
+  // the original entry where it is. Cells stack cards, so pasting into a
+  // non-empty cell just appends.
   const [clipboard, setClipboard] = useState<EntryDTO | null>(null);
 
   function handleCopyEntry(entry: EntryDTO) {
     setClipboard(entry);
-    toast.success("Copied — click an empty cell to paste");
+    toast.success("Copied — click Paste on any cell");
   }
 
   function handlePasteEntry(targetWeek: WeekDTO, targetTimeslot: TimeslotDTO) {
@@ -273,30 +274,33 @@ export function CurriculumMatrix({
                   </div>
                 ) : (
                   timeslots.map((t) => {
-                    const entry =
-                      week.entries.find(
-                        (e) => e.timeslotId === t.id && e.cohort === activeCohort
-                      ) ?? null;
+                    const cellEntries = week.entries.filter(
+                      (e) => e.timeslotId === t.id && e.cohort === activeCohort
+                    );
                     return (
                       <Cell
                         key={t.id}
                         week={week}
                         timeslot={t}
-                        entry={entry}
+                        entries={cellEntries}
                         editable={editable}
                         rowBorder={rowBorder}
-                        onClick={
+                        onEdit={
+                          editable
+                            ? (entry) =>
+                                setActiveCell({ week, timeslot: t, entry })
+                            : undefined
+                        }
+                        onAdd={
                           editable
                             ? () =>
-                                setActiveCell({ week, timeslot: t, entry })
+                                setActiveCell({ week, timeslot: t, entry: null })
                             : undefined
                         }
                         clipboard={clipboard}
                         onCopy={handleCopyEntry}
                         onPaste={
-                          clipboard && !entry
-                            ? () => handlePasteEntry(week, t)
-                            : undefined
+                          clipboard ? () => handlePasteEntry(week, t) : undefined
                         }
                       />
                     );
@@ -366,177 +370,157 @@ function RowFragment({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+/**
+ * A single (week × timeslot) cell. Holds zero or more stacked cards for the
+ * active cohort. Editable cells are a drop target and expose add/paste
+ * affordances; public cells just render the stack.
+ */
 function Cell({
   week,
   timeslot,
-  entry,
+  entries,
   editable,
   rowBorder,
-  onClick,
+  onEdit,
+  onAdd,
   clipboard,
   onCopy,
   onPaste,
 }: {
   week: WeekDTO;
   timeslot: TimeslotDTO;
-  entry: EntryDTO | null;
+  entries: EntryDTO[];
   editable: boolean;
   rowBorder: string;
-  onClick?: () => void;
+  onEdit?: (entry: EntryDTO) => void;
+  onAdd?: () => void;
   clipboard?: EntryDTO | null;
   onCopy?: (entry: EntryDTO) => void;
   onPaste?: () => void;
 }) {
   const dropId = `week:${week.id}|ts:${timeslot.id}`;
 
-  if (!entry) {
-    if (editable) {
-      return (
-        <EmptyDroppableCell
-          id={dropId}
-          rowBorder={rowBorder}
-          onClick={onClick}
-          canPaste={!!clipboard && !!onPaste}
-          onPaste={onPaste}
-        />
-      );
-    }
+  if (!editable) {
     return (
-      <div className={cn("border-l border-border", rowBorder)} />
-    );
-  }
-
-  const meta = PHASE_META[entry.phase];
-  const cellClass = cn(
-    "relative border-l border-border px-3 pt-3 pb-2.5 min-h-16 transition-colors overflow-hidden group/cell",
-    rowBorder
-  );
-
-  if (editable) {
-    return (
-      <DraggableCell
-        id={dropId}
-        entryId={entry.id}
-        cellClass={cellClass}
-        meta={meta}
-        entry={entry}
-        onClick={onClick}
-        onCopy={onCopy ? () => onCopy(entry) : undefined}
-      />
+      <div
+        className={cn(
+          "border-l border-border px-2 py-2 min-h-16 flex flex-col gap-1.5",
+          rowBorder
+        )}
+      >
+        {entries.map((e) => (
+          <EntryCardStatic key={e.id} entry={e} />
+        ))}
+      </div>
     );
   }
 
   return (
-    <div
-      className={cellClass}
-      style={{ background: meta.bg, borderLeftColor: meta.border }}
-    >
-      <span
-        aria-hidden
-        className="absolute inset-x-0 top-0 h-1"
-        style={{ background: meta.ink }}
-      />
-      <span
-        className="text-[9.5px] font-bold uppercase tracking-[0.06em] block"
-        style={{ color: meta.ink }}
-      >
-        {meta.label}
-      </span>
-      <div className="text-[13px] font-semibold text-foreground leading-tight mt-0.5">
-        {entry.title}
-      </div>
-      {entry.description && (
-        <div className="text-[11.5px] text-mute-1 mt-1 line-clamp-2">
-          {entry.description}
-        </div>
-      )}
-    </div>
+    <DroppableCell
+      id={dropId}
+      rowBorder={rowBorder}
+      entries={entries}
+      onEdit={onEdit}
+      onAdd={onAdd}
+      onCopy={onCopy}
+      canPaste={!!clipboard}
+      onPaste={onPaste}
+    />
   );
 }
 
-function EmptyDroppableCell({
+function DroppableCell({
   id,
   rowBorder,
-  onClick,
+  entries,
+  onEdit,
+  onAdd,
+  onCopy,
   canPaste,
   onPaste,
 }: {
   id: string;
   rowBorder: string;
-  onClick?: () => void;
+  entries: EntryDTO[];
+  onEdit?: (entry: EntryDTO) => void;
+  onAdd?: () => void;
+  onCopy?: (entry: EntryDTO) => void;
   canPaste?: boolean;
   onPaste?: () => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id });
+  const empty = entries.length === 0;
+
   return (
     <div
       ref={setNodeRef}
       className={cn(
-        "relative border-l border-border min-h-16 group/cell",
-        isOver && "bg-brand-bg ring-2 ring-brand-dim",
+        "relative border-l border-border min-h-16 px-2 py-2 flex flex-col gap-1.5 group/cell",
+        isOver && "bg-brand-bg ring-2 ring-brand-dim ring-inset",
         rowBorder
       )}
     >
-      <button
-        type="button"
-        onClick={onClick}
+      {entries.map((e) => (
+        <DraggableEntryCard
+          key={e.id}
+          entry={e}
+          onEdit={onEdit ? () => onEdit(e) : undefined}
+          onCopy={onCopy ? () => onCopy(e) : undefined}
+        />
+      ))}
+
+      {/* Footer: add + paste. Prominent when the cell is empty, otherwise
+          revealed on hover so a full stack stays uncluttered. */}
+      <div
         className={cn(
-          "absolute inset-0 px-3 py-3 text-left text-[12px] text-mute-2 hover:bg-mute-4 hover:text-foreground transition-colors group flex items-center gap-1.5"
+          "flex items-center gap-1.5 transition-opacity",
+          empty
+            ? "opacity-60 group-hover/cell:opacity-100"
+            : "opacity-0 group-hover/cell:opacity-100"
         )}
       >
-        <Plus
-          size={12}
-          className="opacity-0 group-hover:opacity-100 transition-opacity"
-        />
-        <span className="opacity-0 group-hover:opacity-100 transition-opacity">
-          Add lesson
-        </span>
-      </button>
-      {canPaste && onPaste && (
         <button
           type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onPaste();
-          }}
-          aria-label="Paste copied lesson here"
-          className="absolute top-1.5 right-1.5 z-10 inline-flex items-center gap-1 px-1.5 h-6 rounded-md bg-brand text-ink border border-brand-dim text-[10.5px] font-bold uppercase tracking-[0.04em] opacity-0 group-hover/cell:opacity-100 transition-opacity hover:brightness-95"
+          onClick={onAdd}
+          className="inline-flex items-center gap-1 px-1.5 h-6 rounded-md text-[11px] font-semibold text-mute-1 hover:bg-mute-4 hover:text-foreground transition-colors"
         >
-          <ClipboardPaste size={11} /> Paste
+          <Plus size={12} />
+          {empty ? "Add lesson" : "Add"}
         </button>
-      )}
+        {canPaste && onPaste && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onPaste();
+            }}
+            aria-label="Paste copied card here"
+            className="inline-flex items-center gap-1 px-1.5 h-6 rounded-md bg-brand text-ink border border-brand-dim text-[10.5px] font-bold uppercase tracking-[0.04em] hover:brightness-95"
+          >
+            <ClipboardPaste size={11} /> Paste
+          </button>
+        )}
+      </div>
     </div>
   );
 }
 
-function DraggableCell({
-  id,
-  entryId,
-  cellClass,
-  meta,
+/** Editable card — draggable, click to edit, copy + delete on hover. */
+function DraggableEntryCard({
   entry,
-  onClick,
+  onEdit,
   onCopy,
 }: {
-  id: string;
-  entryId: string;
-  cellClass: string;
-  meta: { ink: string; bg: string; border: string; label: string };
   entry: EntryDTO;
-  onClick?: () => void;
+  onEdit?: () => void;
   onCopy?: () => void;
 }) {
-  const drag = useDraggable({ id: entryId });
-  const drop = useDroppable({ id });
-
-  const ref = (el: HTMLDivElement | null) => {
-    drag.setNodeRef(el);
-    drop.setNodeRef(el);
-  };
+  const meta = PHASE_META[entry.phase];
+  const drag = useDraggable({ id: entry.id });
 
   const style: React.CSSProperties = {
     background: meta.bg,
-    borderLeftColor: meta.border,
+    borderColor: meta.border,
     transform: drag.transform
       ? `translate3d(${drag.transform.x}px, ${drag.transform.y}px, 0)`
       : undefined,
@@ -546,51 +530,51 @@ function DraggableCell({
 
   return (
     <div
-      ref={ref}
-      className={cn(
-        cellClass,
-        "hover:brightness-95",
-        drop.isOver && !drag.isDragging && "ring-2 ring-brand-dim"
-      )}
+      ref={drag.setNodeRef}
       style={style}
+      className="relative rounded-md border pl-3 pr-2 py-1.5 group/card overflow-hidden hover:brightness-[0.98]"
     >
-      {/* Drag handle (top-left, visible on hover) */}
+      <span
+        aria-hidden
+        className="absolute left-0 inset-y-0 w-1 pointer-events-none"
+        style={{ background: meta.ink }}
+      />
+
+      {/* Drag handle */}
       <button
         type="button"
         {...drag.listeners}
         {...drag.attributes}
-        className="absolute top-1.5 left-1 z-20 size-5 rounded grid place-items-center text-mute-1 hover:text-foreground bg-card/80 border border-border opacity-0 group-hover/cell:opacity-100 transition-opacity cursor-grab active:cursor-grabbing"
-        aria-label="Drag lesson"
+        className="absolute top-1 left-1 z-20 size-4 rounded grid place-items-center text-mute-1 hover:text-foreground bg-card/80 border border-border opacity-0 group-hover/card:opacity-100 transition-opacity cursor-grab active:cursor-grabbing"
+        aria-label="Drag card"
         onClick={(e) => e.stopPropagation()}
       >
-        <GripVertical size={11} />
+        <GripVertical size={10} />
       </button>
 
+      {/* Click-to-edit overlay */}
       <button
         type="button"
-        onClick={onClick}
-        className="absolute inset-0 w-full h-full text-left"
-        aria-label="Edit lesson"
+        onClick={onEdit}
+        className="absolute inset-0 w-full h-full"
+        aria-label="Edit card"
       />
+
       <span
-        aria-hidden
-        className="absolute inset-x-0 top-0 h-1 pointer-events-none"
-        style={{ background: meta.ink }}
-      />
-      <span
-        className="text-[9.5px] font-bold uppercase tracking-[0.06em] block relative pointer-events-none pl-5"
+        className="text-[9px] font-bold uppercase tracking-[0.06em] block relative pointer-events-none"
         style={{ color: meta.ink }}
       >
         {meta.label}
       </span>
-      <div className="text-[13px] font-semibold text-foreground leading-tight mt-0.5 relative pointer-events-none">
+      <div className="text-[12.5px] font-semibold text-foreground leading-tight mt-0.5 relative pointer-events-none">
         {entry.title}
       </div>
       {entry.description && (
-        <div className="text-[11.5px] text-mute-1 mt-1 line-clamp-2 relative pointer-events-none">
+        <div className="text-[11px] text-mute-1 mt-0.5 line-clamp-2 relative pointer-events-none">
           {entry.description}
         </div>
       )}
+
       {onCopy && (
         <button
           type="button"
@@ -598,13 +582,44 @@ function DraggableCell({
             e.stopPropagation();
             onCopy();
           }}
-          aria-label="Copy lesson"
-          className="absolute top-1.5 right-9 z-10 size-6 rounded-md bg-card/95 border border-border text-mute-1 hover:bg-mute-4 hover:text-foreground grid place-items-center opacity-0 group-hover/cell:opacity-100 transition-opacity"
+          aria-label="Copy card"
+          className="absolute top-1 right-8 z-10 size-5 rounded-md bg-card/95 border border-border text-mute-1 hover:bg-mute-4 hover:text-foreground grid place-items-center opacity-0 group-hover/card:opacity-100 transition-opacity"
         >
-          <Copy size={11} />
+          <Copy size={10} />
         </button>
       )}
-      <CellQuickDelete entryId={entryId} />
+      <CellQuickDelete entryId={entry.id} />
+    </div>
+  );
+}
+
+/** Read-only card for the public view. */
+function EntryCardStatic({ entry }: { entry: EntryDTO }) {
+  const meta = PHASE_META[entry.phase];
+  return (
+    <div
+      className="relative rounded-md border pl-3 pr-2 py-1.5 overflow-hidden"
+      style={{ background: meta.bg, borderColor: meta.border }}
+    >
+      <span
+        aria-hidden
+        className="absolute left-0 inset-y-0 w-1"
+        style={{ background: meta.ink }}
+      />
+      <span
+        className="text-[9px] font-bold uppercase tracking-[0.06em] block"
+        style={{ color: meta.ink }}
+      >
+        {meta.label}
+      </span>
+      <div className="text-[12.5px] font-semibold text-foreground leading-tight mt-0.5">
+        {entry.title}
+      </div>
+      {entry.description && (
+        <div className="text-[11px] text-mute-1 mt-0.5 line-clamp-2">
+          {entry.description}
+        </div>
+      )}
     </div>
   );
 }
@@ -615,7 +630,7 @@ function CellQuickDelete({ entryId }: { entryId: string }) {
   function handle(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
-    if (!confirm("Remove this lesson?")) return;
+    if (!confirm("Remove this card?")) return;
     startTransition(async () => {
       try {
         await removeEntry(entryId);
@@ -631,13 +646,13 @@ function CellQuickDelete({ entryId }: { entryId: string }) {
       type="button"
       onClick={handle}
       disabled={isPending}
-      aria-label="Delete lesson"
-      className="absolute top-1.5 right-1.5 z-10 size-6 rounded-md bg-card/95 border border-border text-mute-1 hover:bg-destructive hover:text-white hover:border-destructive grid place-items-center opacity-0 group-hover/cell:opacity-100 transition-opacity"
+      aria-label="Delete card"
+      className="absolute top-1 right-1 z-10 size-5 rounded-md bg-card/95 border border-border text-mute-1 hover:bg-destructive hover:text-white hover:border-destructive grid place-items-center opacity-0 group-hover/card:opacity-100 transition-opacity"
     >
       {isPending ? (
-        <Loader2 size={11} className="animate-spin" />
+        <Loader2 size={10} className="animate-spin" />
       ) : (
-        <Trash2 size={11} />
+        <Trash2 size={10} />
       )}
     </button>
   );

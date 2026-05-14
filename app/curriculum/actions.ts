@@ -6,9 +6,12 @@ import { prisma } from "@/lib/prisma";
 
 const PHASES = ["HANDS_ON", "GUIDED_LESSON", "COMPETITION", "WORK_PERIOD"] as const;
 
-const COHORTS = ["FOUNDATION", "V5RC", "PROJECTS"] as const;
+const COHORTS = ["LESSONS", "V5RC", "PROJECTS"] as const;
 
 const entrySchema = z.object({
+  // When present, edit that exact card. When absent, create a new card —
+  // a cell can hold more than one card per cohort.
+  id: z.string().min(1).optional(),
   weekId: z.string().min(1),
   timeslotId: z.string().min(1),
   title: z.string().trim().min(1, "Title required").max(120),
@@ -100,31 +103,28 @@ export async function duplicateWeek(input: unknown) {
     ? source.entries.filter((e) => e.cohort === data.cohort)
     : source.entries;
 
-  // Copy each entry to the target week (overwriting existing on conflict).
-  for (const e of entriesToCopy) {
-    await prisma.curriculumEntry.upsert({
+  // Replace the target's entries (scoped to the cohort filter, if any) with
+  // fresh copies. Other cohorts on the target week are left untouched.
+  await prisma.$transaction(async (tx) => {
+    await tx.curriculumEntry.deleteMany({
       where: {
-        weekId_timeslotId_cohort: {
-          weekId: target.id,
-          timeslotId: e.timeslotId,
-          cohort: e.cohort,
-        },
-      },
-      create: {
         weekId: target.id,
-        timeslotId: e.timeslotId,
-        title: e.title,
-        description: e.description,
-        phase: e.phase,
-        cohort: e.cohort,
-      },
-      update: {
-        title: e.title,
-        description: e.description,
-        phase: e.phase,
+        ...(data.cohort ? { cohort: data.cohort } : {}),
       },
     });
-  }
+    if (entriesToCopy.length > 0) {
+      await tx.curriculumEntry.createMany({
+        data: entriesToCopy.map((e) => ({
+          weekId: target.id,
+          timeslotId: e.timeslotId,
+          title: e.title,
+          description: e.description,
+          phase: e.phase,
+          cohort: e.cohort,
+        })),
+      });
+    }
+  });
 
   revalidate();
   return target.id;
@@ -149,28 +149,32 @@ export async function toggleBreak(input: unknown) {
 
 export async function upsertEntry(input: unknown) {
   const data = entrySchema.parse(input);
-  await prisma.curriculumEntry.upsert({
-    where: {
-      weekId_timeslotId_cohort: {
+  if (data.id) {
+    // Edit an existing card in place.
+    await prisma.curriculumEntry.update({
+      where: { id: data.id },
+      data: {
         weekId: data.weekId,
         timeslotId: data.timeslotId,
+        title: data.title,
+        description: data.description || null,
+        phase: data.phase,
         cohort: data.cohort,
       },
-    },
-    create: {
-      weekId: data.weekId,
-      timeslotId: data.timeslotId,
-      title: data.title,
-      description: data.description || null,
-      phase: data.phase,
-      cohort: data.cohort,
-    },
-    update: {
-      title: data.title,
-      description: data.description || null,
-      phase: data.phase,
-    },
-  });
+    });
+  } else {
+    // Add a new card — cells can stack more than one.
+    await prisma.curriculumEntry.create({
+      data: {
+        weekId: data.weekId,
+        timeslotId: data.timeslotId,
+        title: data.title,
+        description: data.description || null,
+        phase: data.phase,
+        cohort: data.cohort,
+      },
+    });
+  }
   revalidate();
 }
 
@@ -180,9 +184,9 @@ export async function removeEntry(entryId: string) {
 }
 
 /**
- * Move a curriculum entry to a different (week, timeslot) cell. Cohort
- * is preserved — the same cohort's entry at the destination is swapped.
- * Drag-and-drop only operates within a single cohort tab at a time.
+ * Move a curriculum entry to a different (week, timeslot) cell. Cohort and
+ * phase are preserved. Cells can hold multiple cards, so the card simply
+ * joins the destination stack — nothing is swapped or overwritten.
  */
 export async function moveEntry(input: unknown) {
   const data = z
@@ -206,50 +210,12 @@ export async function moveEntry(input: unknown) {
     return;
   }
 
-  const dest = await prisma.curriculumEntry.findUnique({
-    where: {
-      weekId_timeslotId_cohort: {
-        weekId: data.targetWeekId,
-        timeslotId: data.targetTimeslotId,
-        cohort: source.cohort,
-      },
+  await prisma.curriculumEntry.update({
+    where: { id: source.id },
+    data: {
+      weekId: data.targetWeekId,
+      timeslotId: data.targetTimeslotId,
     },
-  });
-
-  await prisma.$transaction(async (tx) => {
-    if (dest) {
-      // Swap within the same cohort.
-      await tx.curriculumEntry.delete({ where: { id: source.id } });
-      await tx.curriculumEntry.delete({ where: { id: dest.id } });
-      await tx.curriculumEntry.create({
-        data: {
-          weekId: data.targetWeekId,
-          timeslotId: data.targetTimeslotId,
-          title: source.title,
-          description: source.description,
-          phase: source.phase,
-          cohort: source.cohort,
-        },
-      });
-      await tx.curriculumEntry.create({
-        data: {
-          weekId: source.weekId,
-          timeslotId: source.timeslotId,
-          title: dest.title,
-          description: dest.description,
-          phase: dest.phase,
-          cohort: dest.cohort,
-        },
-      });
-    } else {
-      await tx.curriculumEntry.update({
-        where: { id: source.id },
-        data: {
-          weekId: data.targetWeekId,
-          timeslotId: data.targetTimeslotId,
-        },
-      });
-    }
   });
 
   revalidate();
@@ -266,11 +232,12 @@ export async function moveEntry(input: unknown) {
  * Rules:
  *   - `saturday` is YYYY-MM-DD.
  *   - `timeslot` matches an existing CurriculumTimeslot.name (case-insensitive).
- *   - `cohort` is FOUNDATION, V5RC, or PROJECTS (defaults to V5RC if missing).
+ *   - `cohort` is LESSONS, V5RC, or PROJECTS (defaults to V5RC if missing).
  *   - `phase` is one of HANDS_ON, GUIDED_LESSON, COMPETITION,
  *     WORK_PERIOD, or BREAK to mark the whole row as a break.
  *   - For BREAK rows, leave `timeslot` empty; `description` becomes breakNote.
- *   - Existing weeks/entries are upserted, not duplicated.
+ *   - Weeks are upserted; entry rows are always created (cells stack cards),
+ *     so re-importing the same CSV will add duplicates.
  */
 export async function importCurriculumCSV(csv: string) {
   const lines = csv
@@ -296,7 +263,7 @@ export async function importCurriculumCSV(csv: string) {
   );
 
   const PHASES_VALID = new Set(["HANDS_ON", "GUIDED_LESSON", "COMPETITION", "WORK_PERIOD"]);
-  const COHORTS_VALID = new Set(["FOUNDATION", "V5RC", "PROJECTS"]);
+  const COHORTS_VALID = new Set(["LESSONS", "V5RC", "PROJECTS"]);
 
   function parseRow(raw: string) {
     // Minimal CSV parser supporting quoted fields with commas.
@@ -384,24 +351,16 @@ export async function importCurriculumCSV(csv: string) {
     }
 
     const cohort = (COHORTS_VALID.has(cohortRaw) ? cohortRaw : "V5RC") as
-      "FOUNDATION" | "V5RC" | "PROJECTS";
+      "LESSONS" | "V5RC" | "PROJECTS";
 
-    await prisma.curriculumEntry.upsert({
-      where: {
-        weekId_timeslotId_cohort: { weekId: week.id, timeslotId: tsId, cohort },
-      },
-      create: {
+    await prisma.curriculumEntry.create({
+      data: {
         weekId: week.id,
         timeslotId: tsId,
         title,
         description: desc || null,
         phase: phaseRaw as "HANDS_ON" | "GUIDED_LESSON" | "COMPETITION" | "WORK_PERIOD",
         cohort,
-      },
-      update: {
-        title,
-        description: desc || null,
-        phase: phaseRaw as "HANDS_ON" | "GUIDED_LESSON" | "COMPETITION" | "WORK_PERIOD",
       },
     });
     entriesUpserted++;

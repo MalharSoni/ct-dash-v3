@@ -37,12 +37,12 @@ export const PHASES: CurriculumPhase[] = [
   "WORK_PERIOD",
 ];
 
-export const COHORTS: CurriculumCohort[] = ["FOUNDATION", "V5RC", "PROJECTS"];
+export const COHORTS: CurriculumCohort[] = ["LESSONS", "V5RC", "PROJECTS"];
 
 export const COHORT_META: Record<CurriculumCohort, { label: string; shortLabel: string }> = {
-  FOUNDATION: { label: "Foundation", shortLabel: "Foundation" },
-  V5RC:       { label: "V5RC Team",  shortLabel: "V5RC" },
-  PROJECTS:   { label: "Projects",   shortLabel: "Projects" },
+  LESSONS:  { label: "Lessons",   shortLabel: "Lessons" },
+  V5RC:     { label: "V5RC Team", shortLabel: "V5RC" },
+  PROJECTS: { label: "Projects",  shortLabel: "Projects" },
 };
 
 export const DEFAULT_COHORT: CurriculumCohort = "V5RC";

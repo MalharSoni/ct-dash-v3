@@ -17,12 +17,12 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { importCurriculumCSV } from "@/app/curriculum/actions";
 
-const SAMPLE = `saturday,timeslot,title,phase,description
-2025-09-06,Morning 1,Game Analysis,FOUNDATION,Watch reveal & rules walk
-2025-09-06,Morning 2,HeroBot Build,VRC,
-2025-09-13,,Civic Holiday,BREAK,No class — Labour Day weekend
-2025-09-20,Morning 1,Engineering Notebook,PROJECT,
-2025-09-20,Afternoon 1,Drivetrain testing,VRC,Tune the X-drive`;
+const SAMPLE = `saturday,timeslot,cohort,phase,title,description
+2025-09-06,Morning 2,LESSONS,GUIDED_LESSON,Intro to CAD,Onshape basics
+2025-09-06,Morning 1,V5RC,HANDS_ON,HeroBot Build,
+2025-09-13,,V5RC,BREAK,Civic Holiday,No class — Labour Day weekend
+2025-09-20,Morning 1,PROJECTS,WORK_PERIOD,Engineering Notebook,
+2025-09-20,Afternoon 1,V5RC,COMPETITION,Drivetrain testing,Tune the X-drive`;
 
 export function ImportDialog() {
   const [open, setOpen] = useState(false);
