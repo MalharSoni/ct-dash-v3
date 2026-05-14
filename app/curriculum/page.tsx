@@ -54,6 +54,7 @@ async function loadData(): Promise<{
         description: e.description,
         phase: e.phase,
         cohort: e.cohort,
+        lessonTrack: e.lessonTrack,
       })),
     })),
     monthThemes: monthThemes.map((m) => ({

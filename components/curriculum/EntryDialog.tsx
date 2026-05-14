@@ -24,9 +24,21 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { upsertEntry, removeEntry } from "@/app/curriculum/actions";
-import { PHASES, PHASE_META, COHORTS, COHORT_META, DEFAULT_COHORT } from "@/lib/curriculum";
+import {
+  PHASES,
+  PHASE_META,
+  COHORTS,
+  COHORT_META,
+  DEFAULT_COHORT,
+  LESSON_TRACKS,
+  LESSON_TRACK_META,
+} from "@/lib/curriculum";
 import type { EntryDTO, TimeslotDTO, WeekDTO } from "./types";
-import type { CurriculumPhase, CurriculumCohort } from "@prisma/client";
+import type {
+  CurriculumPhase,
+  CurriculumCohort,
+  LessonTrack,
+} from "@prisma/client";
 
 interface Props {
   open: boolean;
@@ -49,6 +61,9 @@ export function EntryDialog({
   const [description, setDescription] = useState(entry?.description ?? "");
   const [phase, setPhase] = useState<CurriculumPhase>(entry?.phase ?? "HANDS_ON");
   const [cohort, setCohort] = useState<CurriculumCohort>(entry?.cohort ?? defaultCohort);
+  const [lessonTrack, setLessonTrack] = useState<LessonTrack | null>(
+    entry?.lessonTrack ?? null
+  );
   const [isPending, startTransition] = useTransition();
 
   // Reset state when entry/timeslot changes
@@ -57,6 +72,7 @@ export function EntryDialog({
     setDescription(entry?.description ?? "");
     setPhase(entry?.phase ?? "HANDS_ON");
     setCohort(entry?.cohort ?? defaultCohort);
+    setLessonTrack(entry?.lessonTrack ?? null);
   }
 
   function handleOpenChange(v: boolean) {
@@ -79,6 +95,7 @@ export function EntryDialog({
           description: description.trim() || null,
           phase,
           cohort,
+          lessonTrack: phase === "GUIDED_LESSON" ? lessonTrack : null,
         });
         toast.success(entry ? "Updated" : "Added");
         onOpenChange(false);
@@ -169,6 +186,38 @@ export function EntryDialog({
               </Select>
             </div>
           </div>
+
+          {phase === "GUIDED_LESSON" && (
+            <div className="space-y-1.5">
+              <Label htmlFor="lessonTrack">Lesson track</Label>
+              <Select
+                value={lessonTrack ?? "NONE"}
+                onValueChange={(v) =>
+                  setLessonTrack(v === "NONE" ? null : (v as LessonTrack))
+                }
+              >
+                <SelectTrigger id="lessonTrack">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="NONE">
+                    <span className="text-mute-1">Generic guided lesson</span>
+                  </SelectItem>
+                  {LESSON_TRACKS.map((tr) => (
+                    <SelectItem key={tr} value={tr}>
+                      <span className="inline-flex items-center gap-2">
+                        <span
+                          className="size-2.5 rounded-sm"
+                          style={{ background: LESSON_TRACK_META[tr].ink }}
+                        />
+                        {LESSON_TRACK_META[tr].label}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div className="space-y-1.5">
             <Label htmlFor="description">Description (optional)</Label>

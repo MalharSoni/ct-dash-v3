@@ -562,6 +562,15 @@ enum CurriculumCohort {
   PROJECTS
 }
 
+// Sub-track for a guided lesson living in the LESSONS tab — which program
+// the lesson originally belongs to. Drives the card label + color so the
+// three lesson streams are easy to tell apart.
+enum LessonTrack {
+  FOUNDATION
+  V5
+  PROJECT
+}
+
 model CurriculumEntry {
   id          String          @id @default(cuid())
   weekId      String
@@ -573,6 +582,8 @@ model CurriculumEntry {
   description String?
   phase       CurriculumPhase @default(HANDS_ON)
   cohort      CurriculumCohort @default(V5RC)
+  // Set on guided lessons in the LESSONS tab to mark their origin stream.
+  lessonTrack LessonTrack?
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

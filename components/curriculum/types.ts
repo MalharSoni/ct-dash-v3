@@ -1,4 +1,8 @@
-import type { CurriculumPhase, CurriculumCohort } from "@prisma/client";
+import type {
+  CurriculumPhase,
+  CurriculumCohort,
+  LessonTrack,
+} from "@prisma/client";
 
 export type TimeslotDTO = {
   id: string;
@@ -16,6 +20,7 @@ export type EntryDTO = {
   description: string | null;
   phase: CurriculumPhase;
   cohort: CurriculumCohort;
+  lessonTrack: LessonTrack | null;
 };
 
 export type WeekDTO = {
