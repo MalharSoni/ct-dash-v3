@@ -31,22 +31,33 @@ export function CohortTabs({ active }: Props) {
         Program
       </span>
       <div className="inline-flex bg-mute-4 border border-border rounded-[var(--radius)] p-1 gap-1">
-        {COHORTS.map((c) => (
-          <button
-            key={c}
-            type="button"
-            onClick={() => select(c)}
-            aria-pressed={active === c}
-            className={cn(
-              "px-4 py-2 text-[14px] font-bold rounded-[6px] transition-all",
-              active === c
-                ? "bg-brand text-ink shadow-card scale-[1.02]"
-                : "text-mute-1 hover:text-foreground hover:bg-card"
-            )}
-          >
-            {COHORT_META[c].label}
-          </button>
-        ))}
+        {COHORTS.map((c) => {
+          const isActive = active === c;
+          return (
+            <button
+              key={c}
+              type="button"
+              onClick={() => select(c)}
+              aria-pressed={isActive}
+              style={
+                isActive
+                  ? {
+                      background: COHORT_META[c].activeBg,
+                      color: COHORT_META[c].activeInk,
+                    }
+                  : undefined
+              }
+              className={cn(
+                "px-4 py-2 text-[14px] font-bold rounded-[6px] transition-all",
+                isActive
+                  ? "shadow-card scale-[1.02]"
+                  : "text-mute-1 hover:text-foreground hover:bg-card"
+              )}
+            >
+              {COHORT_META[c].label}
+            </button>
+          );
+        })}
       </div>
     </div>
   );
