@@ -8,6 +8,8 @@ const PHASES = ["HANDS_ON", "GUIDED_LESSON", "COMPETITION", "WORK_PERIOD"] as co
 
 const COHORTS = ["LESSONS", "V5RC", "PROJECTS"] as const;
 
+const LESSON_TRACKS = ["FOUNDATION", "V5", "PROJECT"] as const;
+
 const entrySchema = z.object({
   // When present, edit that exact card. When absent, create a new card —
   // a cell can hold more than one card per cohort.
@@ -18,6 +20,8 @@ const entrySchema = z.object({
   description: z.string().trim().max(500).optional().nullable(),
   phase: z.enum(PHASES),
   cohort: z.enum(COHORTS).default("V5RC"),
+  // Origin stream for guided lessons in the LESSONS tab.
+  lessonTrack: z.enum(LESSON_TRACKS).optional().nullable(),
 });
 
 const weekSchema = z.object({
@@ -121,6 +125,7 @@ export async function duplicateWeek(input: unknown) {
           description: e.description,
           phase: e.phase,
           cohort: e.cohort,
+          lessonTrack: e.lessonTrack,
         })),
       });
     }
@@ -149,6 +154,10 @@ export async function toggleBreak(input: unknown) {
 
 export async function upsertEntry(input: unknown) {
   const data = entrySchema.parse(input);
+  // A lesson track only applies to guided lessons.
+  const lessonTrack =
+    data.phase === "GUIDED_LESSON" ? data.lessonTrack ?? null : null;
+
   if (data.id) {
     // Edit an existing card in place.
     await prisma.curriculumEntry.update({
@@ -160,6 +169,7 @@ export async function upsertEntry(input: unknown) {
         description: data.description || null,
         phase: data.phase,
         cohort: data.cohort,
+        lessonTrack,
       },
     });
   } else {
@@ -172,6 +182,7 @@ export async function upsertEntry(input: unknown) {
         description: data.description || null,
         phase: data.phase,
         cohort: data.cohort,
+        lessonTrack,
       },
     });
   }

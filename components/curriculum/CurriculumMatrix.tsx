@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useEffect, useTransition } from "react";
 import { format } from "date-fns";
 import { Plus, Trash2, Loader2, GripVertical, Copy, ClipboardPaste, Pencil } from "lucide-react";
 import { toast } from "sonner";
@@ -14,7 +14,7 @@ import {
   type DragEndEvent,
 } from "@dnd-kit/core";
 import { cn } from "@/lib/utils";
-import { PHASE_META, DEFAULT_COHORT } from "@/lib/curriculum";
+import { entryMeta, DEFAULT_COHORT } from "@/lib/curriculum";
 import { EntryDialog } from "./EntryDialog";
 import { MonthThemeDialog } from "./MonthThemeDialog";
 import { WeekRowActions } from "./WeekRowActions";
@@ -58,6 +58,34 @@ export function CurriculumMatrix({
   >(null);
   const [activeTimeslot, setActiveTimeslot] = useState<TimeslotDTO | null>(null);
 
+  // Spotlight the next upcoming Saturday. On Saturday it stays on today's
+  // row; it advances to the following week on Sunday. Computed client-side
+  // from the viewer's local date (the server can't know their timezone), so
+  // it lands as null on first paint then resolves after hydration.
+  const [spotlightWeekId, setSpotlightWeekId] = useState<string | null>(null);
+  useEffect(() => {
+    const now = new Date();
+    const todayMid = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate()
+    ).getTime();
+    let next: string | null = null;
+    for (const w of weeks) {
+      const utc = new Date(w.saturday);
+      const satMid = new Date(
+        utc.getUTCFullYear(),
+        utc.getUTCMonth(),
+        utc.getUTCDate()
+      ).getTime();
+      if (satMid >= todayMid) {
+        next = w.id;
+        break;
+      }
+    }
+    setSpotlightWeekId(next);
+  }, [weeks]);
+
   // In-memory clipboard for copy/paste of cell entries. Stays alive until the
   // page navigates away. Pastes a fresh copy into the target cell and keeps
   // the original entry where it is. Cells stack cards, so pasting into a
@@ -78,6 +106,7 @@ export function CurriculumMatrix({
       description: clipboard.description,
       phase: clipboard.phase,
       cohort: activeCohort,
+      lessonTrack: clipboard.lessonTrack,
     })
       .then(() => toast.success("Pasted"))
       .catch((err) => toast.error(err instanceof Error ? err.message : "Failed"));
@@ -182,6 +211,7 @@ export function CurriculumMatrix({
             );
             const isLast = wIdx === weeks.length - 1;
             const rowBorder = isLast ? "" : "border-b border-border";
+            const isSpotlight = week.id === spotlightWeekId;
 
             // Detect a month boundary — render a banner row above the first
             // week of each month (always, even if no theme is set, so the
@@ -242,9 +272,16 @@ export function CurriculumMatrix({
                   className={cn(
                     "px-3 py-3 flex flex-col gap-0.5",
                     rowBorder,
-                    week.isBreak && "bg-mute-4"
+                    week.isBreak && "bg-mute-4",
+                    isSpotlight &&
+                      "bg-brand-bg border-l-[3px] border-l-brand pl-[9px]"
                   )}
                 >
+                  {isSpotlight && (
+                    <span className="inline-flex items-center self-start gap-1 mb-0.5 px-1.5 h-[16px] rounded bg-brand text-ink text-[9px] font-bold uppercase tracking-[0.06em]">
+                      Up Next
+                    </span>
+                  )}
                   <span className="text-[13.5px] font-bold text-foreground">
                     {format(sat, "MMM d")}
                   </span>
@@ -263,7 +300,8 @@ export function CurriculumMatrix({
                   <div
                     className={cn(
                       "px-4 py-3 border-l border-border bg-mute-4 flex items-center gap-2",
-                      rowBorder
+                      rowBorder,
+                      isSpotlight && "bg-brand-bg"
                     )}
                     style={{ gridColumn: `2 / span ${cols}` }}
                   >
@@ -285,6 +323,7 @@ export function CurriculumMatrix({
                         entries={cellEntries}
                         editable={editable}
                         rowBorder={rowBorder}
+                        spotlight={isSpotlight}
                         onEdit={
                           editable
                             ? (entry) =>
@@ -312,7 +351,8 @@ export function CurriculumMatrix({
                   <div
                     className={cn(
                       "border-l border-border flex items-start justify-center pt-3",
-                      rowBorder
+                      rowBorder,
+                      isSpotlight && "bg-brand-bg"
                     )}
                   >
                     <WeekRowActions week={week} activeCohort={activeCohort} />
@@ -381,6 +421,7 @@ function Cell({
   entries,
   editable,
   rowBorder,
+  spotlight,
   onEdit,
   onAdd,
   clipboard,
@@ -392,6 +433,7 @@ function Cell({
   entries: EntryDTO[];
   editable: boolean;
   rowBorder: string;
+  spotlight?: boolean;
   onEdit?: (entry: EntryDTO) => void;
   onAdd?: () => void;
   clipboard?: EntryDTO | null;
@@ -405,7 +447,8 @@ function Cell({
       <div
         className={cn(
           "border-l border-border px-2 py-2 min-h-16 flex flex-col gap-1.5",
-          rowBorder
+          rowBorder,
+          spotlight && "bg-brand-bg"
         )}
       >
         {entries.map((e) => (
@@ -420,6 +463,7 @@ function Cell({
       id={dropId}
       rowBorder={rowBorder}
       entries={entries}
+      spotlight={spotlight}
       onEdit={onEdit}
       onAdd={onAdd}
       onCopy={onCopy}
@@ -433,6 +477,7 @@ function DroppableCell({
   id,
   rowBorder,
   entries,
+  spotlight,
   onEdit,
   onAdd,
   onCopy,
@@ -442,6 +487,7 @@ function DroppableCell({
   id: string;
   rowBorder: string;
   entries: EntryDTO[];
+  spotlight?: boolean;
   onEdit?: (entry: EntryDTO) => void;
   onAdd?: () => void;
   onCopy?: (entry: EntryDTO) => void;
@@ -456,6 +502,7 @@ function DroppableCell({
       ref={setNodeRef}
       className={cn(
         "relative border-l border-border min-h-16 px-2 py-2 flex flex-col gap-1.5 group/cell",
+        spotlight && "bg-brand-bg",
         isOver && "bg-brand-bg ring-2 ring-brand-dim ring-inset",
         rowBorder
       )}
@@ -515,7 +562,7 @@ function DraggableEntryCard({
   onEdit?: () => void;
   onCopy?: () => void;
 }) {
-  const meta = PHASE_META[entry.phase];
+  const meta = entryMeta(entry.phase, entry.lessonTrack);
   const drag = useDraggable({ id: entry.id });
 
   const style: React.CSSProperties = {
@@ -595,7 +642,7 @@ function DraggableEntryCard({
 
 /** Read-only card for the public view. */
 function EntryCardStatic({ entry }: { entry: EntryDTO }) {
-  const meta = PHASE_META[entry.phase];
+  const meta = entryMeta(entry.phase, entry.lessonTrack);
   return (
     <div
       className="relative rounded-md border pl-3 pr-2 py-1.5 overflow-hidden"
