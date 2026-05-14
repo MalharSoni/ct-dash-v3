@@ -72,6 +72,7 @@ export function EntryDialog({
     startTransition(async () => {
       try {
         await upsertEntry({
+          id: entry?.id,
           weekId: week.id,
           timeslotId: timeslot.id,
           title: title.trim(),

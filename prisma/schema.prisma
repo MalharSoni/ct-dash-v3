@@ -552,11 +552,12 @@ enum CurriculumPhase {
   WORK_PERIOD
 }
 
-// Student cohort. Multiple cohorts can share one (week, timeslot) cell;
-// the public view tabs between them. PROJECTS is a rolling label whose
-// title varies per session.
+// Student cohort. Multiple cohorts can share one (week, timeslot) cell,
+// and a single cohort can stack more than one card in a cell — the public
+// view tabs between cohorts. LESSONS holds every guided lesson across the
+// program. PROJECTS is a rolling timeline whose contents vary per session.
 enum CurriculumCohort {
-  FOUNDATION
+  LESSONS
   V5RC
   PROJECTS
 }
@@ -576,7 +577,8 @@ model CurriculumEntry {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  @@unique([weekId, timeslotId, cohort])
+  // Not unique — a cell can hold multiple cards (per cohort).
+  @@index([weekId, timeslotId, cohort])
 }
 
 // Per-(month, cohort) banner row rendered above the weeks of that month
